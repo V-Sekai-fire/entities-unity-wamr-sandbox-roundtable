@@ -1,0 +1,12 @@
+{"scale":1,"calls":1000000,"lbfgs_iterations":1000000,"rows":[
+ {"case":"1_empty_call","runtime":"wamr","ms":283.858,"check":1},
+ {"case":"1_empty_call","runtime":"libriscv","ms":31.757,"check":1},
+ {"case":"2_transforms_10k_aos","runtime":"wamr","ms":0.466,"check":60000},
+ {"case":"2_transforms_10k_aos","runtime":"libriscv","ms":0.394,"check":60000},
+ {"case":"2_transforms_10k_soa","runtime":"wamr","ms":0.132,"check":60000},
+ {"case":"2_transforms_10k_soa","runtime":"libriscv","ms":0.090,"check":60000},
+ {"case":"3_load_first_update","runtime":"wamr","ms":0.178,"check":1},
+ {"case":"3_load_first_update","runtime":"libriscv","ms":0.628,"check":1},
+ {"case":"4_lbfgs","runtime":"wamr","ms":2807.545,"check":1.40992567e-14},
+ {"case":"4_lbfgs","runtime":"libriscv","ms":3110.376,"check":1.40992534e-14}
+]}
