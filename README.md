@@ -31,6 +31,22 @@ Milliseconds; raw output in `bench/results-unity.json`. Case 2 moves 10,000 real
 | 3. Same, first run (libriscv-bt reused the translation cached by an earlier run) | 1.165 | 0.578 | 5.763 | 8.032 |
 | 4. L-BFGS, 1,000,000 iterations | 2871.9 | 249.3 | 5754.7 | 1736.3 |
 
+### Six runs in the Editor
+
+Median (min–max) of five runs, in milliseconds. Run 2 is left out of the table because the whole run was 4 to 10 times slower (for example WAMR AOT L-BFGS 2525 ms against about 250 ms, WAMR interpreter native empty-call loop 1004 ms against about 265 ms), most likely the Editor throttled while another job used the machine. Its file is kept in `bench/unity-runs/run2.json`. Each run is a separate **Benchmark > Run all** in an open Editor; the libriscv-bt first-run row reuses the on-disk translation, so it is not a cold compile.
+
+|Case|wamr-interp|wamr-aot|libriscv-interp|libriscv-bt|
+|---|---|---|---|---|
+|1_empty_call_from_csharp|278.347 (276.565–294.772)|275.822 (270.194–284.149)|21.633 (20.336–22.397)|25.115 (24.467–25.774)|
+|1_empty_call_native_loop|264.251 (260.840–277.599)|254.416 (249.645–263.055)|6.718 (6.572–7.137)|10.626 (9.953–10.870)|
+|2_transforms_10k_aos|3.108 (3.049–3.145)|2.964 (2.950–3.121)|2.870 (2.867–3.049)|2.754 (2.748–2.873)|
+|2_transforms_10k_soa|2.654 (2.612–2.717)|2.575 (2.496–2.687)|2.689 (2.621–2.803)|2.554 (2.513–2.651)|
+|3_load_first_update|0.207 (0.194–0.239)|0.147 (0.118–0.170)|4.746 (4.164–4.881)|5.931 (5.629–6.360)|
+|3_load_first_update_first_ever|0.303 (0.247–1.165)|0.213 (0.157–0.578)|4.885 (4.684–5.763)|6.464 (6.140–8.032)|
+|4_lbfgs|2883.072 (2871.860–2928.032)|250.688 (246.701–256.383)|5774.228 (5754.738–5914.860)|1748.985 (1736.346–1764.382)|
+
+The five clean runs agree within about 1 to 3 percent on the totals and about 10 percent on the per-load medians (case 3). The ordering in every row is the same in all six runs.
+
 Case 2 checks: every runtime leaves the transforms summing to 60,000. Case 4 residuals agree to 7 digits.
 
 - In Unity, case 2 is the same for all four runtimes (2.5 to 3.1 ms). The Unity `Transform` access dominates, so the runtime choice does not matter for host-API-heavy work. In the native harness the runtimes differed by 4x.
