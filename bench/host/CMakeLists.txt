@@ -42,3 +42,7 @@ add_subdirectory(${DEPS}/libriscv/lib libriscv)
 add_executable(bench bench.cpp)
 target_include_directories(bench PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/.)
 target_link_libraries(bench vmlib riscv)
+
+add_executable(prof_lbfgs prof_lbfgs.cpp)
+target_include_directories(prof_lbfgs PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/.)
+target_link_libraries(prof_lbfgs vmlib riscv)

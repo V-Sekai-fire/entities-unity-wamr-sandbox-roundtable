@@ -124,3 +124,33 @@ The hash has to match, or Godot never loads the file. It is the execute-segment 
 `is_binary_translated()` is true in both, and the residual sum is 1.4e-14, as in every other runtime. This is slower than the standalone harness (libriscv-bt about 620 ms); the compile flags do not explain it (`-O2`, `-O3`, with and without `-fno-inline` all land near 1.0 s), so the difference is in the guest build (zig, musl, `-O3`, vector extension) or the editor's libriscv, and I have not isolated it. Two caveats: the translated code calls back into the editor's libriscv, which is built from a commit I cannot see (it reproduces the layout of the pin, offset 2368, but that is not proof), and the unchecked-memory translation removes bounds checks that WAMR keeps, so it is not a like-for-like row against WAMR.
 
 `usd.elf` is not translated in Godot: the `Sandbox` leaves `ignore_text_section` off, so the initial segment is `.text` only and the first call into `.pxrctor` switches to an untranslated segment (see above). That needs `.pxrctor` linked into `.text` in the guest, or the option exposed in godot-sandbox.
+
+
+## Why WAMR AOT is faster than libriscv binary translation (case 4, profiled)
+
+Case 4 on one runtime only (`bench/build/prof_lbfgs wamr|riscv-interp|riscv-bt <guest> [rounds]`), sampled with macOS `sample`, M2 Pro. Same L-BFGS source, same residual sum (1.40992567e-14).
+
+| | ms per 1M iterations |
+|---|---|
+| wamr-aot | 240 to 244 |
+| libriscv-bt, defaults of this harness | 585 to 623 |
+| libriscv-bt, `translate_use_register_caching` | 569 to 630 (about 570) |
+| libriscv-bt, register caching and `translate_block_split=100000` | 548 to 580 |
+
+**Where the time goes.** 100% of WAMR's samples and 98% of libriscv's (1314 of 1346) are inside generated code. Neither runtime's call, dispatch or syscall path matters here, so the difference is the quality of the machine code. The guest executes 2.71 billion RISC-V instructions for the 1M iterations.
+
+**What the code looks like** (`llvm-objdump` of the AOT object and of the translated library):
+
+| | libriscv-bt translated code | WAMR AOT `lbfgs` function |
+|---|---|---|
+| instructions per floating-point operation | 13.2 | 2.7 |
+| loads and stores | 2787 of 5355 | 472 of 1518 |
+| accesses to the guest register file (`[x19/x20, #off]`) | 1547 | 24 |
+| guest address masks (`and ..., #0x3ffffff`) | 524 | 0 |
+| integer to FP moves (`fmov d, x`) | 176 | 6 |
+
+- **WAMR:** LLVM sees the whole function at `-O3`. It unrolls the N=16 loops, keeps the vectors in `d0`..`d30`, uses paired loads (`ldp`) and does a multiply and an add per element with no stores. Linear memory is one base register, with a guard region instead of a per-access check.
+- **libriscv:** each guest instruction is translated on its own. A floating-point value is loaded into an integer register, spilled to the register file, moved with `fmov`, computed, stored to the register file again and reloaded. The hottest instruction in the profile (213 samples) is a `ldr` that reloads a value stored one instruction earlier (`stp d1, d0, [x20, #0x180]` then `ldr x15, [x20, #0x180]`), a store-to-load round trip. Every guest memory access costs an `and` to mask the address and, because the compiler cannot prove the register-file stores leave the arena pointer alone, a reload of the arena base (`ldr x17, [x20, #0x400]`).
+- **Register caching** (guest registers as C locals) is not enabled by default in the library, although `docs/INTEGRATION.md` says it is (the code default is off without libtcc). It helps about 5 to 8% here and does not touch the floating-point registers, which is where this guest spends its time. Larger translated blocks help a few percent more. Neither closes the gap, so the harness defaults are unchanged and the table above is the evidence.
+
+So the 2.4x is not bounds checking, call overhead or translation coverage. It is that a translator working instruction by instruction, with the guest state in memory, cannot match a compiler that optimises the whole function. A fix would have to keep the FP registers in C locals as well.

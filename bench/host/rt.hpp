@@ -148,6 +148,9 @@ struct Riscv : Rt {
     // Mask guest addresses into the power-of-two arena instead of bounds-checking each one; the
     // guest stays inside its arena, as a wasm module stays inside its linear memory.
     o.translate_automatic_nbit_address_space = bt;
+    // Experiments (profile notes in the README): guest registers as C locals, and the size of a translated block.
+    if (const char *e = getenv("RT_REGCACHE")) o.translate_use_register_caching = atoi(e) != 0;
+    if (const char *e = getenv("RT_BLOCK_SPLIT")) o.translate_block_split = atoi(e);
 #endif
     try {
       m = std::make_unique<M>(std::string_view(bytes.data(), bytes.size()), o);
