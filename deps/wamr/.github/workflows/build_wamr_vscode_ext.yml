@@ -1,0 +1,81 @@
+# Copyright (C) 2019 Intel Corporation.  All rights reserved.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+name: build wamr-ide vscode extension
+
+on:
+  workflow_call:
+    inputs:
+      upload_url:
+        description: upload binary assets to the URL of release
+        type: string
+        required: true
+      ver_num:
+        description: a semantic version number.
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write # for uploading release artifacts
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Use Node.js 18.x
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: 18.x
+
+      - name: set vscode extension to correct version
+        run: |
+          npm install -g json
+          json -I -f package.json -e "this.version=\"${{ inputs.ver_num }}\""
+        working-directory: test-tools/wamr-ide/VSCode-Extension
+
+      - name: generate wamr ide vscode extension
+        run: |
+          npm install -g @vscode/vsce
+          rm -rf node_modules
+          npm install
+          vsce package
+        working-directory: test-tools/wamr-ide/VSCode-Extension
+
+      - name: publish wamr ide vscode extension to the vsce marketplace
+        if: ${{ github.repository == 'wasm-micro-runtime/wasm-micro-runtime' }}
+        run: |
+          vsce publish -p ${{ secrets.TOKEN }}
+        working-directory: test-tools/wamr-ide/VSCode-Extension
+
+      - name: compress the vscode extension
+        run: |
+          mv wamride-*.vsix wamr-ide.vsix
+          tar czf wamr-ide-${{ inputs.ver_num }}.tar.gz wamr-ide.vsix
+          zip wamr-ide-${{ inputs.ver_num }}.zip wamr-ide.vsix
+        working-directory: test-tools/wamr-ide/VSCode-Extension
+
+      - name: upload release tar.gz
+        # TODO: actions/upload-release-asset is archived (read-only) and no longer maintained. Security or compatibility fixes will not land. Replace with `gh release upload`.
+        uses: actions/upload-release-asset@e8f9f06c4b078e705bd2ea027f0926603fc9b4d5 # v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ inputs.upload_url }}
+          asset_path: test-tools/wamr-ide/VSCode-Extension/wamr-ide-${{ inputs.ver_num }}.tar.gz
+          asset_name: wamr-ide-${{ inputs.ver_num }}.tar.gz
+          asset_content_type: application/x-gzip
+
+      - name: upload release zip
+        # TODO: actions/upload-release-asset is archived (read-only) and no longer maintained. Security or compatibility fixes will not land. Replace with `gh release upload`.
+        uses: actions/upload-release-asset@e8f9f06c4b078e705bd2ea027f0926603fc9b4d5 # v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ inputs.upload_url }}
+          asset_path: test-tools/wamr-ide/VSCode-Extension/wamr-ide-${{ inputs.ver_num }}.zip
+          asset_name: wamr-ide-${{ inputs.ver_num }}.zip
+          asset_content_type: application/zip
