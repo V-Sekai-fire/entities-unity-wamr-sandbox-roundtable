@@ -20,3 +20,7 @@ bench/guest/guest.aot
 bench/guest/guest.win.aot
 bench/guest/guest.rv64.elf
 results-unity.json
+
+# usd-wasm build output
+bench/usd-wasm/out/
+bench/usd-wasm/build*/

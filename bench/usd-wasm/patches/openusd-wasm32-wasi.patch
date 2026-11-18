@@ -1,0 +1,99 @@
+diff --git a/pxr/base/arch/virtualMemory.cpp b/pxr/base/arch/virtualMemory.cpp
+index 46f45527a..8fdfa53a3 100644
+--- a/pxr/base/arch/virtualMemory.cpp
++++ b/pxr/base/arch/virtualMemory.cpp
+@@ -64,6 +64,39 @@ ArchSetMemoryProtection(void const *start, size_t numBytes,
+     return VirtualProtect(pageStart, len, protXlat[protection], &oldProtect);
+ }
+ 
++#elif defined(__wasi__)
++
++// WASI has no virtual memory to reserve and commit: linear memory is one grow-only
++// block, and its emulated mmap refuses PROT_NONE. A reservation is a zeroed
++// allocation (so Sdf_Pool regions are sized to fit, see Sdf_PathPoolRegionBits),
++// committing is a no-op, and protection changes do nothing.
++#include <cstdlib>
++
++void *
++ArchReserveVirtualMemory(size_t numBytes)
++{
++    return calloc(1, numBytes);
++}
++
++bool
++ArchCommitVirtualMemoryRange(void *, size_t)
++{
++    return true;
++}
++
++bool
++ArchFreeVirtualMemory(void *start, size_t)
++{
++    free(start);
++    return true;
++}
++
++bool
++ArchSetMemoryProtection(void const *, size_t, ArchMemoryProtection)
++{
++    return true;
++}
++
+ #else // not ARCH_OS_WINDOWS, assume POSIX (mmap, mprotect)
+ 
+ void *
+diff --git a/pxr/base/tf/diagnostic.cpp b/pxr/base/tf/diagnostic.cpp
+index e08d11e10..5b9ffd039 100644
+--- a/pxr/base/tf/diagnostic.cpp
++++ b/pxr/base/tf/diagnostic.cpp
+@@ -191,6 +191,7 @@ std::string TfGetProgramNameForErrors()
+ }
+ 
+ // Called when we get a fatal signal.
++#if !defined(__wasi__)
+ static void
+ #if !defined(ARCH_OS_WINDOWS)
+ _fatalSignalHandler(int signo, siginfo_t*, void*)
+@@ -252,12 +253,15 @@ _fatalSignalHandler(int signo)
+         _exit(128 + signo);
+     #endif
+ }
++#endif // !__wasi__
+ 
+ void
+ TfInstallTerminateAndCrashHandlers()
+ {
+     std::set_terminate(Tf_TerminateHandler);
+-#if defined(ARCH_OS_WINDOWS)
++#if defined(__wasi__)
++    // WASI has no sigaction; a trap ends the guest.
++#elif defined(ARCH_OS_WINDOWS)
+     signal(SIGSEGV, &_fatalSignalHandler);
+     signal(SIGFPE,  &_fatalSignalHandler);
+     signal(SIGABRT, &_fatalSignalHandler);
+diff --git a/pxr/usd/sdf/path.h b/pxr/usd/sdf/path.h
+index 20f3d0b31..9e5aa452f 100644
+--- a/pxr/usd/sdf/path.h
++++ b/pxr/usd/sdf/path.h
+@@ -56,11 +56,19 @@ static constexpr size_t Sdf_MaxSizeofPrimPathNode = 24;
+ static constexpr size_t Sdf_MaxSizeofPropPathNode = 24;
+ #endif
+ 
++// A region is 2^(32-regionBits) elements, reserved whole. 8 bits is 16M elements,
++// 256 to 320 MB per region: fine for 64-bit address space, not for wasm32's 4 GiB.
++#ifdef ARCH_BITS_32
++static constexpr unsigned Sdf_PathPoolRegionBits = 14;
++#else
++static constexpr unsigned Sdf_PathPoolRegionBits = 8;
++#endif
++
+ using Sdf_PathPrimPartPool = Sdf_Pool<
+-    Sdf_PathPrimTag, Sdf_MaxSizeofPrimPathNode, /*regionBits=*/8>;
++    Sdf_PathPrimTag, Sdf_MaxSizeofPrimPathNode, Sdf_PathPoolRegionBits>;
+ 
+ using Sdf_PathPropPartPool = Sdf_Pool<
+-    Sdf_PathPropTag, Sdf_MaxSizeofPropPathNode, /*regionBits=*/8>;
++    Sdf_PathPropTag, Sdf_MaxSizeofPropPathNode, Sdf_PathPoolRegionBits>;
+ 
+ using Sdf_PathPrimHandle = Sdf_PathPrimPartPool::Handle;
+ using Sdf_PathPropHandle = Sdf_PathPropPartPool::Handle;
