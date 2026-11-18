@@ -162,6 +162,9 @@ EXPORT(lbfgs) double lbfgs(int solves, int iters) {
   return f;
 }
 
+/* No-argument entry for hosts that can only call a function by name (rvlinux --call). */
+__attribute__((used, visibility("default"))) double lbfgs_1m(void) { return lbfgs(50000, 20); }
+
 #ifndef __wasm__
 __attribute__((used)) void sys_exit(void) { register long a7 __asm__("a7") = 93; __asm__ volatile("ecall" ::"r"(a7)); }
 __attribute__((naked, used)) void _start(void) {

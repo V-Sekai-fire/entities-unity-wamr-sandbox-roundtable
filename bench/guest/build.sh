@@ -10,7 +10,7 @@ $LLVM/clang --target=wasm32 -O2 -fno-math-errno -nostdlib -Wl,--no-entry -Wl,--a
   -Wl,--initial-memory=2097152 -o guest.wasm guest.c
 
 # rv64 with the same compiler as the wasm, so case 4 compares runtimes and not GCC against clang
-$LLVM/clang --target=riscv64-unknown-elf -march=rv64gc -mabi=lp64d -O2 -fno-math-errno -ffreestanding -nostdlib \
+$LLVM/clang --target=riscv64-unknown-elf -march=rv64gc -mabi=lp64d -O2 -fno-math-errno -ffp-contract=off -ffreestanding -nostdlib \
   -mno-relax -fuse-ld=$LLD/ld.lld -static -Wl,-e,_start -Wl,-z,separate-code -Wl,-z,max-page-size=4096 \
   -o guest.rv64.elf guest.c
 ls -l guest.wasm guest.rv64.elf

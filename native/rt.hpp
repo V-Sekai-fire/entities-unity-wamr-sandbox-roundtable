@@ -126,6 +126,9 @@ struct Riscv : Rt {
     o.translate_ignore_instruction_limit = true;
     o.translation_cache = true;
     o.translation_prefix = "rvbintr-";
+    // Mask guest addresses into the power-of-two arena instead of bounds-checking each one; the
+    // guest stays inside its arena, as a wasm module stays inside its linear memory.
+    o.translate_automatic_nbit_address_space = bt;
 #endif
     try {
       m = std::make_unique<M>(std::string_view(bytes.data(), bytes.size()), o);
