@@ -1,0 +1,13 @@
+# used to speed up wasi-nn tests and the devcontainer image build
+# (the devcontainer Dockerfile now builds from the repo root context).
+# you shall adapt below rules to incoming requirements
+
+**/build
+**/tmp.*
+.*
+**/*.gguf
+
+/core/deps/
+!/core/deps/tensorflow-src
+/samples
+/tests

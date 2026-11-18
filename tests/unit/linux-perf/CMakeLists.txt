@@ -1,0 +1,18 @@
+# Copyright (C) 2019 Intel Corporation.  All rights reserved.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+wamr_unit_test_suite_run_modes(linux-perf MODES llvm-jit aot)
+if(NOT WAMR_UNIT_TEST_SUITE_ENABLED)
+  return()
+endif()
+
+set(WAMR_BUILD_LINUX_PERF 1)
+
+include(../unit_common.cmake)
+
+include(${IWASM_DIR}/compilation/iwasm_compl.cmake)
+
+add_executable(linux_perf_test test_sort_func_ptrs.cc)
+target_compile_options(linux_perf_test PUBLIC -fpermissive)
+target_link_libraries(linux_perf_test ${LLVM_AVAILABLE_LIBS} gtest_main)
+gtest_discover_tests(linux_perf_test)
