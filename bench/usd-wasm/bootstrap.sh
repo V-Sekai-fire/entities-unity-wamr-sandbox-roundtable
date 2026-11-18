@@ -22,12 +22,10 @@ fi
 export W
 
 # --- 2. sources, pinned ---------------------------------------------------------------------------------------
-fetch() { # dir url rev
+fetch() { # dir url rev (tag or commit): shallow fetch, then check out what was fetched
   if [ ! -d "$1/.git" ]; then git init -q "$1"; git -C "$1" remote add origin "$2"; fi
-  if [ "$(git -C "$1" rev-parse HEAD 2>/dev/null || true)" != "$3" ] && [ "$(git -C "$1" rev-parse "$3^{commit}" 2>/dev/null || true)" != "$3" ]; then
-    git -C "$1" fetch -q --depth 1 origin "$3"
-  fi
-  git -C "$1" checkout -q --force "$3"
+  git -C "$1" fetch -q --depth 1 origin "$3"
+  git -C "$1" checkout -q --force FETCH_HEAD
 }
 patch_once() { # dir patch
   if git -C "$1" apply --reverse --check "$2" 2>/dev/null; then return; fi
