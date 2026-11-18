@@ -1,11 +1,11 @@
 cmake_minimum_required(VERSION 3.14)
 project(unity_wamr_sandbox_bench C CXX ASM)
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE Release)
 endif()
 
-# WAMR: interpreter only (fast interpreter), no WASI.
+# WAMR: fast interpreter and AOT, no WASI.
 set(DEPS ${CMAKE_CURRENT_SOURCE_DIR}/../../deps)
 set(WAMR_ROOT_DIR ${DEPS}/wamr)
 set(WAMR_BUILD_PLATFORM "darwin")
@@ -16,7 +16,7 @@ else()
 endif()
 set(WAMR_BUILD_INTERP 1)
 set(WAMR_BUILD_FAST_INTERP 1)
-set(WAMR_BUILD_AOT 0)
+set(WAMR_BUILD_AOT 1)
 set(WAMR_BUILD_JIT 0)
 set(WAMR_BUILD_FAST_JIT 0)
 set(WAMR_BUILD_LIBC_BUILTIN 0)
@@ -28,13 +28,16 @@ add_library(vmlib STATIC ${WAMR_RUNTIME_LIB_SOURCE})
 target_include_directories(vmlib PUBLIC ${WAMR_ROOT_DIR}/core/iwasm/include)
 target_link_libraries(vmlib PUBLIC m ${LLVM_AVAILABLE_LIBS})
 
-# libriscv C API (the machine under godot-sandbox and sandbox-host)
-set(RISCV_EXT_C ON CACHE BOOL "" FORCE)
-add_subdirectory(${DEPS}/libriscv/c libriscv_c)
+# libriscv: 64-bit only, flat arena, threaded dispatch, binary translation through the system
+# compiler (no libtcc, so the translation is compiled with optimisation and cached as a shared object).
+set(RISCV_32I OFF CACHE BOOL "" FORCE)
+set(RISCV_64I ON CACHE BOOL "" FORCE)
+set(RISCV_EXT_V OFF CACHE BOOL "" FORCE)
+set(RISCV_BINARY_TRANSLATION ON CACHE BOOL "" FORCE)
+set(RISCV_LIBTCC OFF CACHE BOOL "" FORCE)
+set(RISCV_FLAT_RW_ARENA ON CACHE BOOL "" FORCE)
+set(RISCV_THREADED ON CACHE BOOL "" FORCE)
+add_subdirectory(${DEPS}/libriscv/lib libriscv)
 
 add_executable(bench bench.cpp)
-target_link_libraries(bench vmlib riscv_capi)
-
-# libriscv.h has a field named `stdout`; macOS stdio makes it a macro. Include stdio first so the field is renamed consistently.
-target_compile_options(riscv_capi PRIVATE -include stdio.h)
-target_compile_options(bench PRIVATE -include stdio.h)
+target_link_libraries(bench vmlib riscv)

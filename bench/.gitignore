@@ -1,3 +1,7 @@
 build/
+wamrc-build/
+rvbintr-*
+*.log
 guest/guest.wasm
+guest/guest.aot
 guest/guest.rv64.elf

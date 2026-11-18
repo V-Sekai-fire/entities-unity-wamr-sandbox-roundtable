@@ -9,73 +9,62 @@ Benchmark comparing WAMR and godot-sandbox as script runtimes inside Unity Engin
 3. **Cold load.** Load a downloaded module, instantiate it, and run its first update. The module is the OpenUSD guest.
 4. **Compute.** 1,000,000 iterations of a complex math problem: L-BFGS (limited-memory BFGS) solving a saddle problem.
 
-## Runtimes
-
-- [WAMR](https://github.com/bytecodealliance/wasm-micro-runtime)
-- [godot-sandbox](https://github.com/libriscv/godot-sandbox)
-
-## Guest modules
-
-- [interactor-usd-guest](https://github.com/V-Sekai-fire/interactor-usd-guest)
-- [contract-tris-to-quads-guest](https://github.com/V-Sekai-fire/contract-tris-to-quads-guest)
-
-## Tech stack
-
-Taken from `chibifire-stages/character-fox-manifest`, which already runs godot-sandbox guests in Unity.
-
-- `dev.chibifire.sandbox-host` (Unity 2022.3, Editor only): `sandbox_host.dll` wraps libriscv's C API and answers godot-sandbox's host ECALLs natively. The godot-sandbox side of the benchmark drives its `sbhost_*` C ABI (ABI version 2).
-- ABI conventions to copy for WAMR: int64 machine ids instead of pointers, a `.sigs` contract that gates the header, the C# P/Invoke file and the DLL exports, a little-endian Variant wire, and resumable gassed calls (`sbhost_resume`, `sbhost_abort`).
-- Native build: CMake with llvm-mingw cross-compiling the Windows DLL, environment pinned with Pixi.
-- libriscv is pinned at `e121610a`, matching sandbox-host.
-- Guests: `interactor-usd-guest` (case 3), `contract-tris-to-quads-guest`.
-- Case 4 needs the same instruction budget on both runtimes. Without it, report wall time only.
-
-## Dependencies
-
-Each is a squashed git subtree under `deps/`. Upstream submodule links were removed.
-
-| Path | Upstream | Commit |
-|---|---|---|
-| `deps/wamr` | bytecodealliance/wasm-micro-runtime | `f298aef0` |
-| `deps/godot-sandbox` | libriscv/godot-sandbox | `4f9c73d6` |
-| `deps/libriscv` | libriscv/libriscv | `e121610a` |
-| `deps/interactor-usd-guest` | V-Sekai-fire/interactor-usd-guest | `fb960c02` |
-| `deps/contract-tris-to-quads-guest` | V-Sekai-fire/contract-tris-to-quads-guest | `f61de603` |
-
 ## Run
 
-    brew install llvm riscv64-elf-gcc ninja cmake
-    bench/guest/build.sh
+    brew install llvm llvm@22 riscv64-elf-gcc ninja cmake
+    # wamrc, the WAMR AOT compiler. LLVM 23 is too new for WAMR 2.4.3; llvm@22 builds.
+    cmake -S deps/wamr/wamr-compiler -B bench/wamrc-build -G Ninja -DCMAKE_BUILD_TYPE=Release \
+      -DLLVM_DIR=$(brew --prefix llvm@22)/lib/cmake/llvm -DWAMR_BUILD_PLATFORM=darwin
+    cmake --build bench/wamrc-build
+    bench/guest/build.sh            # guest.wasm, guest.aot, guest.rv64.elf
     cmake -S bench/host -B bench/build -G Ninja && cmake --build bench/build
-    bench/build/bench bench/guest/guest.wasm bench/guest/guest.rv64.elf 1
+    cd bench && CC=clang CFLAGS=-O3 build/bench guest/guest.wasm guest/guest.aot guest/guest.rv64.elf 1
 
-The last argument divides the iteration counts (1 = full size).
+The last argument divides the iteration counts (1 = full size). Run from `bench/`: libriscv writes its translation cache (`rvbintr-*`) to the working directory.
+
+## What each runtime is set up to do
+
+- **wamr-interp:** WAMR fast interpreter.
+- **wamr-aot:** the same wasm compiled ahead of time by `wamrc --opt-level=3` for the host CPU. Loaded with the same `wasm_runtime_load` call.
+- **libriscv-interp:** libriscv's C++ API with a 64-bit-only build, flat read-write arena, threaded dispatch, prepared calls (`PreparedCall`), direct guest-memory pointers in the host API (`memarray`), and no instruction counting.
+- **libriscv-bt:** the same plus binary translation. libtcc is off, so the C99 translation is compiled by the system compiler (`CC=clang CFLAGS=-O3`) into a shared object, cached on disk and loaded at construction.
+
+Neither side uses gas. Case 4 gives both the same budget: none.
 
 ## Results
 
-Native macOS arm64 harness, not yet inside Unity. One guest source (`bench/guest/guest.c`) is built for wasm32 and rv64gc. WAMR runs as its fast interpreter (no AOT, no JIT). libriscv runs with its default build options. Raw output is in `bench/results.json`; times are milliseconds.
+Native macOS arm64 harness, not yet inside Unity. One guest source (`bench/guest/guest.c`) is built for wasm32 and rv64gc. Times are milliseconds. Raw output is in `bench/results.json`.
 
-| Case | WAMR | libriscv |
-|---|---|---|
-| 1. Empty export, 1,000,000 calls from the host (total) | 283.9 | 31.8 |
-| 2. 10,000 transforms, AOS: one host call per transform (median of 200) | 0.466 | 0.394 |
-| 2. 10,000 transforms, SOA: 12 column reads and 12 column writes (median of 200) | 0.132 | 0.090 |
-| 3. Read module from disk, instantiate, first update (median of 200) | 0.178 | 0.628 |
-| 4. L-BFGS saddle, 50,000 solves x 20 iterations = 1,000,000 iterations (total) | 2807.5 | 3110.4 |
+| Case | wamr-interp | wamr-aot | libriscv-interp | libriscv-bt |
+|---|---|---|---|---|
+| 1. Empty export, 1,000,000 host calls (total) | 264.4 | 253.0 | 6.8 | 11.6 |
+| 2. 10,000 transforms, AOS, one host call each (median of 200) | 0.476 | 0.280 | 0.219 | 0.120 |
+| 2. 10,000 transforms, SOA, 24 column calls (median of 200) | 0.130 | 0.022 | 0.147 | 0.042 |
+| 3. Load from disk, instantiate, first update, cache warm (median of 200) | 0.206 | 0.072 | 0.674 | 1.226 |
+| 3. Same, first ever (translation compiled and cached) | 0.463 | 0.154 | 5.597 | 928.9 |
+| 4. L-BFGS saddle, 1,000,000 iterations (total) | 2984.8 | 249.1 | 7321.6 | 1877.3 |
 
-Checks that the work was done: both runtimes leave the host transforms summing to 60,000 in cases 2 AOS and 2 SOA. In case 4 the summed residuals agree to 7 digits (1.40992567e-14 and 1.40992534e-14). They are not identical because the rv64 build uses fused multiply-add.
+Checks: every runtime leaves the host transforms summing to 60,000 in both layouts. The L-BFGS residual sums agree to 7 digits (1.40992567e-14 for WAMR, 1.40992534e-14 for libriscv). They are not identical because the rv64 build uses fused multiply-add.
+
+Reading the table:
+
+- libriscv wins the host-boundary cases (1 and 2 AOS). Each call is a register setup and a jump. A WAMR call goes through `wasm_runtime_call_wasm`, which costs about 250 ns even for AOT code.
+- WAMR AOT wins compute (case 4) by 7.5x over libriscv's binary translation, and wins the SOA case, where the guest loop dominates.
+- libriscv binary translation costs 929 ms the first time and 1.2 ms to load afterwards. A shipped build needs the translation pre-generated and embedded; libriscv supports embedding the generated source.
+- WAMR AOT loads fastest (0.072 ms).
 
 What this does not show:
 
-- Unity is not in the loop. The numbers are the runtimes and the host-call path, not the P/Invoke boundary. Case 1 and the host-call cost in case 2 will change inside Unity.
-- Case 3 loads a 5 KB test guest, not the OpenUSD module. The OpenUSD guest is not built here.
-- The two runtimes use different host-call paths (WAMR native symbols, libriscv ecall handlers), and the guest ABIs differ in pointer width.
-- libriscv's instruction-limit gas is enabled in every call. WAMR runs without gas, so case 4 does not give both runtimes the same budget.
+- Unity is not in the loop. These numbers exclude the P/Invoke boundary, which will add cost to every host call.
+- Case 3 loads a 5 KB test guest, not the OpenUSD module.
+- libriscv is built here as 64-bit only with its default arena. godot-sandbox guests use libriscv's own build options; sandbox-host adds gas and a Variant wire that this harness does not.
+- No gas on either side, which sandbox-host needs.
 - One machine, one run of the totals. No variance for cases 1 and 4.
+- The two compilers differ: wasm comes from LLVM 23 clang, rv64 from GCC.
 
 ## Status
 
-Cases 1 to 4 run natively with the test guest. Not built yet: the Unity host for either runtime, the OpenUSD guest, and AOT or JIT modes of WAMR.
+Cases 1 to 4 run natively with the test guest, in interpreter and AOT or binary-translation modes. Not built yet: the Unity host for either runtime and the OpenUSD guest.
 
 ## Licence
 
