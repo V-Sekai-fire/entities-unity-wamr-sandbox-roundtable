@@ -45,7 +45,7 @@ Median (min–max) of five runs, in milliseconds. Run 2 is left out of the table
 |3_load_first_update_first_ever|0.303 (0.247–1.165)|0.213 (0.157–0.578)|4.885 (4.684–5.763)|6.464 (6.140–8.032)|
 |4_lbfgs|2883.072 (2871.860–2928.032)|250.688 (246.701–256.383)|5774.228 (5754.738–5914.860)|1748.985 (1736.346–1764.382)|
 
-The five clean runs agree within about 1 to 3 percent on the totals and about 10 percent on the per-load medians (case 3). The ordering in every row is the same in all six runs.
+The five clean runs agree within about 1 to 3 percent on the totals and about 10 percent on the per-load medians (case 3). The runtime ordering is identical in all five clean runs for cases 1, 3 (warm) and 4. In case 2 the four runtimes are within about 10 percent of each other, which is the same size as the run-to-run spread, so no ordering is claimed there.
 
 Case 2 checks: every runtime leaves the transforms summing to 60,000. Case 4 residuals agree to 7 digits.
 
