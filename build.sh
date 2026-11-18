@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # One command, no arguments: builds everything the Unity project and the native harness need (macOS arm64).
-#   brew install llvm llvm@22 riscv64-elf-gcc ninja cmake
+#   brew install llvm llvm@22 lld ninja cmake
 set -euo pipefail
 cd "$(dirname "$0")"
 
