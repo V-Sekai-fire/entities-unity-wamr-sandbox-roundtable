@@ -95,4 +95,18 @@ Translation is about 4.5x faster than the libriscv interpreter and about 5x slow
 
 ## Host
 
-The Unity project and plugin (with the baked-translation plugin build) were deleted; the earlier Unity numbers are in git history (before `e7bcb84`'s successor). Godot's own `Sandbox` is the libriscv host now. Note that godot-sandbox only looks up a prebaked `bintr-<hash>` translation (`sandbox/binary_translation/enabled`, `cache_dir`) and never compiles one, so a Godot run interprets until a translation is baked.
+The Unity project and plugin (with the baked-translation plugin build) were deleted; the earlier Unity numbers are in git history (up to commit `ec501c7`). Godot's own `Sandbox` is the libriscv host now. Note that godot-sandbox only looks up a prebaked `bintr-<hash>` translation (`sandbox/binary_translation/enabled`, `cache_dir`) and never compiles one, so a Godot run interprets until a translation is baked.
+
+
+## Cases 1 and 4 through Godot's Sandbox (interpreter)
+
+`bench/godot-guest` builds the benchmark guest as a godot-sandbox program (`./build.sh`: zig, riscv64-linux-musl, double-precision API, llvm-ar). Its L-BFGS is the same source file the wasm and rv64 guests use (`bench/guest/lbfgs.h`). The program carries the `.sandbox_variant` marker (`SBXV`, 40) that the editor requires, as `contract-tris-to-quads-guest` does. Run in a real window (no `--headless`) on the Godot 4.8-beta double editor from `entities-zone`, M2 Pro:
+
+| | Godot Sandbox, interpreter |
+|---|---|
+| Case 1, 1,000,000 `vmcall("empty")` from a GDScript loop | 65 ms (includes the GDScript loop) |
+| Case 4, 1M L-BFGS iterations | 3431 to 3448 ms, residual sum 1.4e-14 (same as the other runtimes) |
+
+For comparison, the standalone libriscv interpreter takes 3.9 to 4.0 s on case 4. Case 1 here is not comparable with the harness row, which loops in native code. Case 2 (transform access) is not ported: it was a Unity `Transform` measurement.
+
+Binary translation in this editor is **not on**: `has_feature_jit()` is false (no asmjit in this build), and godot-sandbox never compiles a translation, it only loads a prebaked `bintr-<hash>.dylib`. Godot asks for hash `590873FC` for this guest. `bench/godot-guest/bake` bakes with libriscv from `deps/` using Godot's `MachineOptions`, but its hashes (e.g. `0AEE675F`) do not match, and even the raw execute-segment checksum differs (`FB0BF128`), so the editor was built from a different libriscv than `deps/libriscv`. A translation from the wrong libriscv must not be loaded, so none is used. To get translated Godot rows, bake with the exact libriscv commit the editor was built from.

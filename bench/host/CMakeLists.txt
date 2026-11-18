@@ -40,5 +40,5 @@ set(RISCV_THREADED ON CACHE BOOL "" FORCE)
 add_subdirectory(${DEPS}/libriscv/lib libriscv)
 
 add_executable(bench bench.cpp)
-target_include_directories(bench PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../../native)
+target_include_directories(bench PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/.)
 target_link_libraries(bench vmlib riscv)

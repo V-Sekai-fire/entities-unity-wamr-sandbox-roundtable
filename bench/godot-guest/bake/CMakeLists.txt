@@ -1,0 +1,13 @@
+cmake_minimum_required(VERSION 3.18)
+project(bake CXX)
+set(CMAKE_CXX_STANDARD 20)
+# libriscv configured as godot-sandbox's ext/CMakeLists.txt does: 64-bit only, vector extension, translation on, no libtcc.
+set(RISCV_32I OFF CACHE BOOL "" FORCE)
+set(RISCV_64I ON CACHE BOOL "" FORCE)
+set(RISCV_EXT_V ON CACHE BOOL "" FORCE)
+set(RISCV_BINARY_TRANSLATION ON CACHE BOOL "" FORCE)
+set(RISCV_LIBTCC OFF CACHE BOOL "" FORCE)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../../../deps/libriscv/lib libriscv)
+target_compile_definitions(riscv PUBLIC RISCV_SYSCALLS_MAX=600 RISCV_BRK_MEMORY_SIZE=0x100000)
+add_executable(bake bake.cpp)
+target_link_libraries(bake PRIVATE riscv)

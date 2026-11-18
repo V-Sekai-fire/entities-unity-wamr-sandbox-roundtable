@@ -45,3 +45,5 @@ bench/usd-wasm/build*/
 /Assets/StreamingAssets/guest.win.aot
 /Assets/StreamingAssets/guest.rv64.elf
 /results-unity.json
+/bench/godot-guest/build/
+/bench/godot-guest/bake/build/
