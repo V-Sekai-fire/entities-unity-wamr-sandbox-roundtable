@@ -154,3 +154,17 @@ Case 4 on one runtime only (`bench/build/prof_lbfgs wamr|riscv-interp|riscv-bt <
 - **Register caching** (guest registers as C locals) is not enabled by default in the library, although `docs/INTEGRATION.md` says it is (the code default is off without libtcc). It helps about 5 to 8% here and does not touch the floating-point registers, which is where this guest spends its time. Larger translated blocks help a few percent more. Neither closes the gap, so the harness defaults are unchanged and the table above is the evidence.
 
 So the 2.4x is not bounds checking, call overhead or translation coverage. It is that a translator working instruction by instruction, with the guest state in memory, cannot match a compiler that optimises the whole function. A fix would have to keep the FP registers in C locals as well.
+
+
+### Caching the FP registers (patch to libriscv's emitter)
+
+Every FP access in the emitter goes through `from_fpreg()`, so with `translate_use_register_caching` on it now returns a `fp64reg freg<N>` local, declared in the function header, written back in each `STORE_REGS_` macro and the exception exit, and reloaded in `LOAD_REGS_`. The patch is `bench/godot-guest/bake/fp-regcache.patch` (against `tr_emit.cpp`), also committed to `V-Sekai-fire/entities-godot` branch `dev/sandbox` as `516cd72` (`modules/sandbox/ext/libriscv`). It changes nothing unless the option is set. The earlier FP-locals attempt gave a wrong answer; this one gives the same residual sum (1.40992567e-14).
+
+| Case 4, standalone harness (`RT_REGCACHE=1`) | ms |
+|---|---|
+| libriscv-bt, integer registers cached only | about 570 |
+| libriscv-bt, FP registers cached too | 371 to 397 |
+| same, with `RT_BLOCK_SPLIT=100000` | 427 to 474 (larger blocks are now slower) |
+| wamr-aot | 240 to 244 |
+
+The gap to WAMR AOT is 2.4x before and about 1.5x after. In Godot's Sandbox, baked with `BAKE_REGCACHE=1`, the same change takes case 4 from 1092 to 973 ms (hash and result unchanged, `is_binary_translated` true), a smaller gain than standalone; I have not found why. Tested on this guest only: `usd.elf` and libriscv's own tests were not run with the option on.

@@ -6,7 +6,9 @@ if(NOT CMAKE_BUILD_TYPE)
 endif()
 
 # WAMR: fast interpreter and AOT, no WASI.
-set(DEPS ${CMAKE_CURRENT_SOURCE_DIR}/../../deps)
+if(NOT DEPS)
+  set(DEPS ${CMAKE_CURRENT_SOURCE_DIR}/../../deps)
+endif()
 set(WAMR_ROOT_DIR ${DEPS}/wamr)
 set(WAMR_BUILD_PLATFORM "darwin")
 if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(arm64|aarch64)")
