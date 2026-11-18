@@ -49,6 +49,7 @@ UB_API void ub_close(int id) {
   g_rts[id - 1]->close();
   g_rts[id - 1].reset();
 }
+UB_API int ub_translated(int id) { Rt *r = get(id); return r && r->translated(); }
 UB_API int ub_empty(int id) { Rt *r = get(id); return r && r->empty(); }
 UB_API int ub_empty_n(int id, int n) {  // n calls without leaving native code
   Rt *r = get(id);

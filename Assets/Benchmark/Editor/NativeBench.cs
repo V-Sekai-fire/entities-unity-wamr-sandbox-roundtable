@@ -16,6 +16,7 @@ namespace Benchmark
         [DllImport(Lib)] public static extern int ub_init(IntPtr get, IntPtr set, IntPtr getColumn, IntPtr setColumn);
         [DllImport(Lib)] public static extern int ub_open(int kind, byte[] image, int len);
         [DllImport(Lib)] public static extern void ub_close(int id);
+        [DllImport(Lib)] public static extern int ub_translated(int id);
         [DllImport(Lib)] public static extern int ub_empty(int id);
         [DllImport(Lib)] public static extern int ub_empty_n(int id, int n);
         [DllImport(Lib)] public static extern int ub_update(int id);

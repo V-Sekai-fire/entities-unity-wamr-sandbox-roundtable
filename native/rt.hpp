@@ -30,6 +30,7 @@ struct Rt {
   virtual bool update() = 0;
   virtual bool transforms(int n, bool soa) = 0;
   virtual bool lbfgs(int solves, int iters, double *out) = 0;
+  virtual bool translated() { return false; }  // true only when libriscv really runs translated code
 };
 
 // ---- WAMR
@@ -139,7 +140,21 @@ struct Riscv : Rt {
       p_trs = std::make_unique<riscv::PreparedCall<riscv::RISCV64, long(int)>>(*m, "transforms_soa");
       p_lb = std::make_unique<riscv::PreparedCall<riscv::RISCV64, double(int, int)>>(*m, "lbfgs");
     } catch (const std::exception &e) { fprintf(stderr, "libriscv open: %s\n", e.what()); return false; }
+#ifdef RISCV_BINARY_TRANSLATION
+    // A failed compiler call leaves libriscv quietly interpreting. A row labelled binary translation must not be one.
+    if (bt && !translated()) {
+      fprintf(stderr, "libriscv open: binary translation requested but not active (the C compiler call failed?)\n");
+      return false;
+    }
+#endif
     return true;
+  }
+  bool translated() override {
+#ifdef RISCV_BINARY_TRANSLATION
+    return m && m->cpu.current_execute_segment().is_binary_translated();
+#else
+    return false;
+#endif
   }
   void close() override { p_empty.reset(); p_update.reset(); p_tr.reset(); p_trs.reset(); p_lb.reset(); m.reset(); }
   bool empty() override { (*p_empty)(); return true; }

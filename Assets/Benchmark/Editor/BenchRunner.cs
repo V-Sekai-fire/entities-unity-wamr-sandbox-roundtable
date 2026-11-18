@@ -92,6 +92,7 @@ namespace Benchmark
 
                 int h = NativeBench.ub_open(r.Kind, img, img.Length);
                 if (h < 1) throw new Exception(r.Name + ": ub_open failed " + h);
+                UnityEngine.Debug.Log("[bench] " + r.Name + " binary translated: " + (NativeBench.ub_translated(h) == 1));
 
                 // Case 1: an empty export, 'calls' times. Once with the loop in C# (every call crosses P/Invoke),
                 // once with the loop in native code (the cost of the call itself).
