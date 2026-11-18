@@ -1,6 +1,6 @@
-# entities-unity-wamr-sandbox-roundtable
+# entities-unity-wamr-sandbox-roundtable (Godot host)
 
-Benchmark comparing WAMR and godot-sandbox as script runtimes inside Unity Engine.
+Benchmark comparing WAMR and godot-sandbox as script runtimes. The Unity host was removed: libriscv runs through godot-sandbox in Godot (`bench/usd/godot-check`), WAMR through the standalone harness.
 
 ## Reproduce
 
@@ -9,8 +9,8 @@ Host: macOS on Apple silicon (the Windows DLL is cross-built; the Windows number
 ```sh
 brew install llvm llvm@22 lld ninja cmake zig   # zig only for the Windows DLL; Xcode command line tools for clang
 git clone https://github.com/V-Sekai-fire/entities-unity-wamr-sandbox-roundtable && cd entities-unity-wamr-sandbox-roundtable
-./build.sh                          # wamrc, the guests (wasm, AOT, rv64), the harness, the Unity plugins
-./bench.sh                          # cases 1, 2, 4 without Unity; writes bench/results.json
+./build.sh                          # wamrc, the guests (wasm, AOT, rv64), the harness
+./bench.sh                          # cases 1, 2, 4 ; writes bench/results.json
 ```
 
 Case 3 with the real OpenUSD module (about 20 minutes for the first build, needs ~10 GB disk in `.cache/`):
@@ -21,33 +21,12 @@ bench/usd-wasm/bootstrap.sh         # wasi-sdk, oneTBB, OpenUSD -> usd.wasm, usd
 ./bench.sh                          # now also runs case 3 under WAMR
 ```
 
-Inside Unity (2022.3.22f1, installed through Unity Hub): open the folder and choose **Benchmark > Run all**, or headless:
-
-```sh
-/Applications/Unity/Hub/Editor/2022.3.22f1/Unity.app/Contents/MacOS/Unity -batchmode -nographics \
-  -projectPath "$PWD" -executeMethod Benchmark.BenchRunner.RunBatch -quit
-```
-
-It writes `results-unity.json`.
-
-Not reproducible from this repository alone: **case 3 on libriscv with the real `usd.elf`**. That guest speaks godot-sandbox's host ABI, which only `chibifire-stages/sandbox-host` (private) implements outside Godot. `bench/usd/results.md` records that run; it is not a like-for-like comparison with WAMR until it uses the same translation settings.
-
-Timings vary by machine and by what else is running; the checked-in `bench/results.json` and `bench/unity-runs/` are the runs behind the tables below.
-
 ## Cases
 
 1. **Empty call.** Call an exported empty function 1,000,000 times.
 2. **Host API transforms.** 10,000 transform reads and writes through the host API.
 3. **Cold load.** Load a downloaded module, instantiate it, and run its first update. The module is the OpenUSD guest.
 4. **Compute.** 1,000,000 iterations of a complex math problem: L-BFGS (limited-memory BFGS) solving a saddle problem.
-
-## Unity project
-
-The repository root is a Unity 2022.3.22f1 project. `./build.sh` builds everything it loads:
-
-- `Assets/Plugins/macOS/libub_native.dylib` (arm64) and `Assets/Plugins/x86_64/ub_native.dll` (Windows x86_64, cross-compiled with zig's clang). Both come from `native/`, which wraps WAMR and libriscv behind a small C ABI (`native/ub_native.cpp`). The Windows build has no libriscv binary translation, because that compiles C with the system compiler at run time.
-- `Assets/StreamingAssets/guest.*`: the guest as wasm, AOT (macOS arm64 and Windows x86_64) and rv64.
-- `Assets/Benchmark/Editor`: the runner (menu **Benchmark > Run all**) and 10,000 real Unity `Transform`s as the host API. Writes `results-unity.json`.
 
 ### Results
 
@@ -63,26 +42,6 @@ Both guests are built with clang from one source (`bench/guest/guest.c`), the rv
 |~~3. Load, instantiate, first update, warm~~|~~0.201~~|~~0.110~~|~~0.699~~|~~1.013~~|
 |~~3. Same, first ever~~|~~0.373~~|~~0.214~~|~~6.644~~|~~476.322~~|
 |4. L-BFGS saddle, 1,000,000 iterations|2862.954|247.112|4066.062|618.835|
-
-**Inside Unity 2022.3.22f1, headless batchmode**, median (min–max) of six runs (`bench/unity-runs/`):
-
-|Case|wamr-interp|wamr-aot|libriscv-interp|libriscv-bt|
-|---|---|---|---|---|
-|1. 1,000,000 empty calls, loop in C#|289.227 (274.491–300.448)|289.327 (260.014–312.292)|21.302 (14.811–24.447)|27.370 (20.527–37.872)|
-|1. Same, loop in native code|273.341 (258.942–281.597)|261.463 (252.173–281.929)|7.232 (6.667–12.121)|12.410 (11.641–13.228)|
-|2. 10,000 transforms, AOS|2.987 (2.805–3.483)|2.968 (2.663–3.170)|2.868 (2.552–3.201)|2.633 (2.412–3.050)|
-|2. 10,000 transforms, SOA|2.519 (2.446–2.910)|2.498 (2.374–2.714)|2.667 (2.551–2.909)|2.459 (2.317–2.712)|
-|~~3. Load, instantiate, first update, warm~~|~~0.218 (0.187–0.312)~~|~~0.154 (0.091–0.166)~~|~~4.540 (3.699–5.200)~~|~~5.649 (5.210–6.203)~~|
-|~~3. Same, first in the process~~|~~0.971 (0.876–1.018)~~|~~0.246 (0.144–0.337)~~|~~6.280 (5.311–19.009)~~|~~6.540 (5.807–791.612)~~|
-|4. L-BFGS saddle, 1,000,000 iterations|2997.507 (2867.128–3103.850)|261.382 (249.779–279.058)|4012.511 (3867.552–4161.395)|627.478 (611.207–651.306)|
-
-Checks: the transforms sum to 60,000 in both layouts, and the L-BFGS residual sums agree across all four runtimes (1.40992567e-14).
-
-- WAMR AOT is within about 10% of native arm64 clang code on case 4 (223 ms native), scales linearly with the work, and does bounds-check memory (MMU guard pages by default; software checks cost about 9% more).
-- libriscv wins the host-boundary cases (1, 2 AOS). WAMR AOT wins compute (case 4), about 2.5x over libriscv's translation and 15x over its interpreter.
-- In Unity case 2 is equal for all four runtimes within the spread, because `Transform` access dominates.
-- libriscv translation costs 0.5 to 0.9 s the first time and about 1 ms to load once cached. Ship it pre-generated.
-- Compile flags (`-O2`, `-mcpu=native`, `-Ofast`) change libriscv case 4 by under 3%.
 
 ### libriscv case 4 follow-up
 
@@ -118,15 +77,6 @@ Cases 1 to 4 run natively with the test guest, in interpreter and AOT or binary-
 MIT. See [LICENSE](LICENSE).
 
 
-## Binary translation in the Unity plugin (macOS)
-
-`./build.sh` bakes libriscv's binary translation of the rv64 benchmark guest ahead of time (`native/bake.cpp`, `ub_bake`) and compiles the generated source into `libub_native.dylib`. At run time libriscv finds it by hash ("Found embedded translation for hash 53C2A38A"), so the shipped plugin needs no C compiler. Checked with `PATH=/nonexistent CC=/bin/false`: it loads, reports `translated 1`, and case 4 gives the same residual sum as every other runtime. The Unity batch run logs `libriscv-bt binary translated: True`; `libriscv-bt` refuses to open if translation is not active, and each machine has its own execute segment, so an interpreter row can no longer inherit a translation.
-
-Unity batch run (macOS, embedded): case 4 libriscv-bt 650 ms, libriscv-interp 3888 ms.
-
-Not done: the Windows DLL still builds without translation (the same bake should work there; untested), and `usd.elf` is not translated in any host I tried because of the `.pxrctor` section outside `.text`.
-
-
 ## usd.elf with binary translation actually engaged (macOS arm64, Mire)
 
 Cause of the earlier "translation never runs" result: `usd.elf` keeps OpenUSD's static constructors in a `.pxrctor` section after `.text`, inside the same executable segment. libriscv by default makes the initial execute segment `.text` only, so the first call into `.pxrctor` made it build a second, untranslated segment, and everything after ran there (11 entries to the interpreter loop, all on the untranslated segment).
@@ -141,3 +91,8 @@ Fix: `MachineOptions::ignore_text_section = true`, so the whole executable PT_LO
 | WAMR interpreter | 1984 to 2077 |
 
 Translation is about 4.5x faster than the libriscv interpreter and about 5x slower than WAMR AOT here. Costs and caveats: the one-time translation compile took 1183 s with `-O2 -fno-inline -fno-inline-functions` (the `-O3` compile exceeded 13 GB of RAM); later runs create in 118 to 178 ms from the cached library. It needed the translation caps lifted (`translate_blocks_max`, `translate_instr_max`, the hard-coded 500,000-mapping check in `tr_translate.cpp`) and `translate_ignore_instruction_limit`, which removes runaway protection. Those changes were made in a scratch copy of libriscv, not in `deps/`, and sandbox-host is a private repo, so this row is not reproducible from this repo alone. Host used the double-precision layout. Marocchino was not re-run.
+
+
+## Host
+
+The Unity project and plugin (with the baked-translation plugin build) were deleted; the earlier Unity numbers are in git history (before `e7bcb84`'s successor). Godot's own `Sandbox` is the libriscv host now. Note that godot-sandbox only looks up a prebaked `bintr-<hash>` translation (`sandbox/binary_translation/enabled`, `cache_dir`) and never compiles one, so a Godot run interprets until a translation is baked.

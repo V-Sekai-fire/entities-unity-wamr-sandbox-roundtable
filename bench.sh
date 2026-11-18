@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Runs the benchmarks that need no Unity and prints the tables. Run ./build.sh first (and, for case 3,
+# Runs the benchmarks  and prints the tables. Run ./build.sh first (and, for case 3,
 # bench/usd/fetch.sh and bench/usd-wasm/bootstrap.sh). Writes bench/results.json and bench/usd/wamr-results.txt.
 set -euo pipefail
 cd "$(dirname "$0")"
