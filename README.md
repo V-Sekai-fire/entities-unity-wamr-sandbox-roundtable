@@ -58,7 +58,7 @@ libriscv-bt was 1089 ms and is now about 620 ms. Two harness fixes, no libriscv 
 
 What this does not show:
 
-- **Case 3 loads a 5 KB test guest, not the OpenUSD module.** `usd.elf` was not obtained; sandbox-host's native build was started but not finished. That is still open.
+- **Case 3 in the tables above loads a 5 KB test guest.** The real `usd.elf` (32 MB) now runs under libriscv via sandbox-host with Mire and Marocchino: see `bench/usd/results.md` (open takes 3 to 12 s). WAMR has no equivalent because OpenUSD has no wasm build, so there is no like-for-like USD comparison.
 - No gas on either side. One machine.
 
 ## Status
