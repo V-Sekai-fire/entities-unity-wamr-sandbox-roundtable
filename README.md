@@ -125,3 +125,19 @@ MIT. See [LICENSE](LICENSE).
 Unity batch run (macOS, embedded): case 4 libriscv-bt 650 ms, libriscv-interp 3888 ms.
 
 Not done: the Windows DLL still builds without translation (the same bake should work there; untested), and `usd.elf` is not translated in any host I tried because of the `.pxrctor` section outside `.text`.
+
+
+## usd.elf with binary translation actually engaged (macOS arm64, Mire)
+
+Cause of the earlier "translation never runs" result: `usd.elf` keeps OpenUSD's static constructors in a `.pxrctor` section after `.text`, inside the same executable segment. libriscv by default makes the initial execute segment `.text` only, so the first call into `.pxrctor` made it build a second, untranslated segment, and everything after ran there (11 entries to the interpreter loop, all on the untranslated segment).
+
+Fix: `MachineOptions::ignore_text_section = true`, so the whole executable PT_LOAD (0x5402CC, length 0xB6B80C) is the segment. The translation (544,344 mappings, all applied) is then entered 28,120,349 times.
+
+| Mire, `open` | ms |
+|---|---|
+| libriscv interpreter | 2906 to 3363 |
+| libriscv binary translation, `.pxrctor` inside the segment | 660 to 665 (4 runs) |
+| WAMR AOT | 130 to 139 |
+| WAMR interpreter | 1984 to 2077 |
+
+Translation is about 4.5x faster than the libriscv interpreter and about 5x slower than WAMR AOT here. Costs and caveats: the one-time translation compile took 1183 s with `-O2 -fno-inline -fno-inline-functions` (the `-O3` compile exceeded 13 GB of RAM); later runs create in 118 to 178 ms from the cached library. It needed the translation caps lifted (`translate_blocks_max`, `translate_instr_max`, the hard-coded 500,000-mapping check in `tr_translate.cpp`) and `translate_ignore_instruction_limit`, which removes runaway protection. Those changes were made in a scratch copy of libriscv, not in `deps/`, and sandbox-host is a private repo, so this row is not reproducible from this repo alone. Host used the double-precision layout. Marocchino was not re-run.
