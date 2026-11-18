@@ -1,4 +1,4 @@
-# Building usd.wasm
+# Building usd.wasm by hand (bootstrap.sh does all of this)
 
 `usd.wasm` is the OpenUSD guest core (`deps/interactor-usd-guest/guest/usd/usd_core.cpp` and `mem_resolver.cpp`)
 built for wasm32-wasip1 with a plain C ABI (`main_wasm.cpp`) instead of godot-sandbox's Variant API.

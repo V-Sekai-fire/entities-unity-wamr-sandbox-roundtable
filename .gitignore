@@ -24,3 +24,24 @@ results-unity.json
 # usd-wasm build output
 bench/usd-wasm/out/
 bench/usd-wasm/build*/
+
+# Build output: everything below is made by build.sh, bench.sh and bench/usd-wasm/bootstrap.sh
+/.cache/
+/bench/wamrc-build/
+/bench/build/
+/bench/work/
+/bench/guest/guest.wasm
+/bench/guest/guest.aot
+/bench/guest/guest.win.aot
+/bench/guest/guest.rv64.elf
+/bench/rvbintr-*
+/bench/err.log
+/native/build/
+/native/build-win/
+/Assets/Plugins/macOS/*.dylib
+/Assets/Plugins/x86_64/*.dll
+/Assets/StreamingAssets/guest.wasm
+/Assets/StreamingAssets/guest.aot
+/Assets/StreamingAssets/guest.win.aot
+/Assets/StreamingAssets/guest.rv64.elf
+/results-unity.json

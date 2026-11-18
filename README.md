@@ -2,6 +2,38 @@
 
 Benchmark comparing WAMR and godot-sandbox as script runtimes inside Unity Engine.
 
+## Reproduce
+
+Host: macOS on Apple silicon (the Windows DLL is cross-built; the Windows numbers are not measured). Nothing binary is in git; every step below builds from the sources and the pinned `deps/` subtrees.
+
+```sh
+brew install llvm llvm@22 lld ninja cmake zig   # zig only for the Windows DLL; Xcode command line tools for clang
+git clone https://github.com/V-Sekai-fire/entities-unity-wamr-sandbox-roundtable && cd entities-unity-wamr-sandbox-roundtable
+./build.sh                          # wamrc, the guests (wasm, AOT, rv64), the harness, the Unity plugins
+./bench.sh                          # cases 1, 2, 4 without Unity; writes bench/results.json
+```
+
+Case 3 with the real OpenUSD module (about 20 minutes for the first build, needs ~10 GB disk in `.cache/`):
+
+```sh
+bench/usd/fetch.sh                  # Mire.usdz, Marocchino.usdz, usd.elf: pinned, sha256 checked
+bench/usd-wasm/bootstrap.sh         # wasi-sdk, oneTBB, OpenUSD -> usd.wasm, usd.aot, usdbench
+./bench.sh                          # now also runs case 3 under WAMR
+```
+
+Inside Unity (2022.3.22f1, installed through Unity Hub): open the folder and choose **Benchmark > Run all**, or headless:
+
+```sh
+/Applications/Unity/Hub/Editor/2022.3.22f1/Unity.app/Contents/MacOS/Unity -batchmode -nographics \
+  -projectPath "$PWD" -executeMethod Benchmark.BenchRunner.RunBatch -quit
+```
+
+It writes `results-unity.json`.
+
+Not reproducible from this repository alone: **case 3 on libriscv with the real `usd.elf`**. That guest speaks godot-sandbox's host ABI, which only `chibifire-stages/sandbox-host` (private) implements outside Godot. `bench/usd/results.md` records that run; it is not a like-for-like comparison with WAMR until it uses the same translation settings.
+
+Timings vary by machine and by what else is running; the checked-in `bench/results.json` and `bench/unity-runs/` are the runs behind the tables below.
+
 ## Cases
 
 1. **Empty call.** Call an exported empty function 1,000,000 times.
@@ -11,7 +43,7 @@ Benchmark comparing WAMR and godot-sandbox as script runtimes inside Unity Engin
 
 ## Unity project
 
-The repository root is a Unity 2022.3.22f1 project. `build.sh` (one command, no arguments, macOS arm64 host) builds everything it loads:
+The repository root is a Unity 2022.3.22f1 project. `./build.sh` builds everything it loads:
 
 - `Assets/Plugins/macOS/libub_native.dylib` (arm64) and `Assets/Plugins/x86_64/ub_native.dll` (Windows x86_64, cross-compiled with zig's clang). Both come from `native/`, which wraps WAMR and libriscv behind a small C ABI (`native/ub_native.cpp`). The Windows build has no libriscv binary translation, because that compiles C with the system compiler at run time.
 - `Assets/StreamingAssets/guest.*`: the guest as wasm, AOT (macOS arm64 and Windows x86_64) and rv64.
