@@ -37,6 +37,7 @@ Checks on the WAMR AOT numbers:
 - Case 4 compiled natively for arm64 with clang `-O2` takes 223 ms (230 to 244 ms over repeated runs) against 253 ms for WAMR AOT, so AOT is within about 10 percent of native code, as expected for AOT.
 - AOT time is linear in the work: 278, 126, 64 and 24 ms for 50,000, 25,000, 12,500 and 5,000 solves, and its summed residual equals the interpreter's and the native build's at every size (1.40992567e-14, 7.04962836e-15, 3.52479767e-15, 1.40992567e-15).
 - Every one of the 20 iterations of a solve does real work: the residual falls from 1.5 to 2.8e-19 with no stalled iterations.
+- WAMR AOT does bounds-check linear memory. On 64-bit hosts `wamrc` leaves the check to the MMU (a guard-page reservation), which costs almost nothing. Compiled with `--bounds-checks=1` (explicit compare-and-branch on every access, which is what libriscv's translation does) case 4 takes 270 ms against 246 ms, and 10,000 AOS transforms take 0.55 ms against 0.41 ms. So the guard pages are worth about 9 percent here; they do not explain the 4x gap to libriscv.
 - The case 1 call cost is the same for the interpreter and AOT (about 250 ns per `wasm_runtime_call_wasm`), because the call path, not the guest code, dominates an empty function.
 
 Reading the table:
