@@ -58,7 +58,7 @@ namespace Benchmark
             {
                 if (rows.Length > 0) rows.Append(",\n");
                 rows.Append(string.Format(CultureInfo.InvariantCulture,
-                    " {{\"case\":\"{0}\",\"runtime\":\"{1}\",\"ms\":{2:0.###},\"check\":{3:R}}}", cs, rt, ms, chk));
+                    " {{\"case\":\"{0}\",\"runtime\":\"{1}\",\"ms\":{2:0.###},\"check\":{3}}}", cs, rt, ms, chk.ToString("G17", CultureInfo.InvariantCulture)));
             };
 
             HostWorld.Create();

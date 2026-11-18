@@ -19,3 +19,4 @@ bench/guest/guest.wasm
 bench/guest/guest.aot
 bench/guest/guest.win.aot
 bench/guest/guest.rv64.elf
+results-unity.json

@@ -17,6 +17,26 @@ The repository root is a Unity 2022.3.22f1 project. `build.sh` (one command, no 
 - `Assets/StreamingAssets/guest.*`: the guest as wasm, AOT (macOS arm64 and Windows x86_64) and rv64.
 - `Assets/Benchmark/Editor`: the runner (menu **Benchmark > Run all**) and 10,000 real Unity `Transform`s as the host API. Writes `results-unity.json`.
 
+### Results inside Unity 2022.3.22f1 (macOS arm64 Editor)
+
+Milliseconds; raw output in `bench/results-unity.json`. Case 2 moves 10,000 real `Transform`s through managed callbacks (reads `localPosition` and `localRotation`, writes `localPosition`).
+
+| Case | wamr-interp | wamr-aot | libriscv-interp | libriscv-bt |
+|---|---|---|---|---|
+| 1. 1,000,000 empty calls, loop in C# (each call crosses P/Invoke) | 277.7 | 275.8 | 20.3 | 24.6 |
+| 1. Same, loop in native code | 260.8 | 249.6 | 6.6 | 10.9 |
+| 2. 10,000 transforms, AOS (median of 200) | 3.055 | 2.964 | 2.867 | 2.754 |
+| 2. 10,000 transforms, SOA (median of 200) | 2.612 | 2.496 | 2.621 | 2.513 |
+| 3. Load, instantiate, first update (median of 200) | 0.229 | 0.153 | 4.746 | 6.149 |
+| 3. Same, first run (libriscv-bt reused the translation cached by an earlier run) | 1.165 | 0.578 | 5.763 | 8.032 |
+| 4. L-BFGS, 1,000,000 iterations | 2871.9 | 249.3 | 5754.7 | 1736.3 |
+
+Case 2 checks: every runtime leaves the transforms summing to 60,000. Case 4 residuals agree to 7 digits.
+
+- In Unity, case 2 is the same for all four runtimes (2.5 to 3.1 ms). The Unity `Transform` access dominates, so the runtime choice does not matter for host-API-heavy work. In the native harness the runtimes differed by 4x.
+- Case 1 shows the P/Invoke boundary adds about 14 ms per million calls for libriscv (20.3 against 6.6). It is invisible next to WAMR's 250 ns per call.
+- Case 3 here loads the 5 KB test guest, not an avatar module.
+
 The Windows DLL is built and its exports and imports are checked (only system DLLs), but it has not been run on Windows.
 
 ## Avatars
