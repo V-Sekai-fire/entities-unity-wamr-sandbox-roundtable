@@ -121,9 +121,27 @@ struct Riscv : Rt {
     riscv::MachineOptions<riscv::RISCV64> o;
     o.memory_max = 64ull << 20;
     o.default_exit_function = "sys_exit";
+    // Machines must not share an execute segment: a translated machine would hand its translation to an
+    // interpreter machine opened later on the same ELF, and the rows would no longer mean what they say.
+    o.use_shared_execute_segments = false;
 #ifdef RISCV_BINARY_TRANSLATION
     o.translate_enabled = bt;
+#ifdef UB_EMBEDDED
+    // Shipped build: the translation was baked ahead of time and is compiled into this library, found by
+    // hash. No compiler is invoked and none is needed on the machine that runs it.
+    o.translate_invoke_compiler = false;
+    o.translate_enable_embedded = true;
+#else
     o.translate_invoke_compiler = bt;
+#endif
+    if (getenv("UB_VERBOSE")) { o.verbose_loader = true; o.translate_timing = true; }
+    // ub_bake sets UB_BAKE_DIR: the translation this machine builds is also written there as C++ source.
+    if (bt) if (const char *d = getenv("UB_BAKE_DIR")) {
+      riscv::MachineTranslationEmbeddableCodeOptions e;
+      e.prefix = std::string(d) + "/ub-";
+      e.suffix = ".cpp";
+      o.cross_compile.push_back(e);
+    }
     o.translate_ignore_instruction_limit = true;
     o.translation_cache = true;
     o.translation_prefix = "rvbintr-";

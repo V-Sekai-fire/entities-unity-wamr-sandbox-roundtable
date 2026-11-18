@@ -48,9 +48,22 @@ set(RISCV_THREADED ON CACHE BOOL "" FORCE)
 add_subdirectory(${DEPS}/libriscv/lib libriscv)
 
 add_library(ub_native SHARED ub_native.cpp)
+# UB_EMBED_SRC: the translation ub_bake wrote (ub-<HASH>.cpp). Compiled into the plugin, it registers itself by
+# hash when the library loads, so libriscv finds it without a C compiler or a shared object on disk.
+if(UB_EMBED_SRC)
+  target_sources(ub_native PRIVATE ${UB_EMBED_SRC})
+  target_compile_definitions(ub_native PRIVATE UB_EMBEDDED=1)
+  set_source_files_properties(${UB_EMBED_SRC} PROPERTIES COMPILE_OPTIONS "-O2;-fno-inline")
+endif()
 target_include_directories(ub_native PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(ub_native PRIVATE vmlib riscv)
 set_target_properties(ub_native PROPERTIES CXX_VISIBILITY_PRESET hidden)
 if(WIN32)
   set_target_properties(ub_native PROPERTIES PREFIX "")
+endif()
+
+if(NOT WIN32)
+  add_executable(ub_bake bake.cpp)
+  target_include_directories(ub_bake PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+  target_link_libraries(ub_bake PRIVATE vmlib riscv)
 endif()

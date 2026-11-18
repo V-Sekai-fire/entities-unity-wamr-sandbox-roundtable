@@ -116,3 +116,12 @@ Cases 1 to 4 run natively with the test guest, in interpreter and AOT or binary-
 ## Licence
 
 MIT. See [LICENSE](LICENSE).
+
+
+## Binary translation in the Unity plugin (macOS)
+
+`./build.sh` bakes libriscv's binary translation of the rv64 benchmark guest ahead of time (`native/bake.cpp`, `ub_bake`) and compiles the generated source into `libub_native.dylib`. At run time libriscv finds it by hash ("Found embedded translation for hash 53C2A38A"), so the shipped plugin needs no C compiler. Checked with `PATH=/nonexistent CC=/bin/false`: it loads, reports `translated 1`, and case 4 gives the same residual sum as every other runtime. The Unity batch run logs `libriscv-bt binary translated: True`; `libriscv-bt` refuses to open if translation is not active, and each machine has its own execute segment, so an interpreter row can no longer inherit a translation.
+
+Unity batch run (macOS, embedded): case 4 libriscv-bt 650 ms, libriscv-interp 3888 ms.
+
+Not done: the Windows DLL still builds without translation (the same bake should work there; untested), and `usd.elf` is not translated in any host I tried because of the `.pxrctor` section outside `.text`.

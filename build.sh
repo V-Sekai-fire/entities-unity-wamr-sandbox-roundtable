@@ -25,12 +25,18 @@ cmake --build bench/build
 # 4. the Unity plugin and the guests it loads
 mkdir -p Assets/Plugins/macOS Assets/Plugins/x86_64 Assets/StreamingAssets
 #    macOS arm64
-cmake -S native -B native/build -G Ninja
+cmake -S native -B native/build -G Ninja -DUB_EMBED_SRC=
+cmake --build native/build
+#    Bake libriscv's binary translation of the rv64 guest ahead of time and compile it into the plugin, so the
+#    shipped dylib needs no C compiler. The compile of the baked source takes about a minute.
+rm -rf native/baked && CC=clang CFLAGS="-O2 -fno-inline" native/build/ub_bake bench/guest/guest.rv64.elf native/baked
+BAKED=$(ls native/baked/ub-*.cpp)
+cmake -S native -B native/build -G Ninja -DUB_EMBED_SRC="$PWD/$BAKED"
 cmake --build native/build
 cp native/build/libub_native.dylib Assets/Plugins/macOS/
-#    Windows x86_64, cross-compiled with zig's clang (mingw-w64 ABI); no binary translation there. Skipped without zig.
+#    Windows x86_64, cross-compiled with zig's clang (mingw-w64 ABI); no binary translation there yet. Skipped without zig.
 if command -v zig >/dev/null; then
-  cmake -S native -B native/build-win -G Ninja -DCMAKE_TOOLCHAIN_FILE="$PWD/native/cmake/mingw-w64.cmake"
+  cmake -S native -B native/build-win -G Ninja -DUB_EMBED_SRC= -DCMAKE_TOOLCHAIN_FILE="$PWD/native/cmake/mingw-w64.cmake"
   cmake --build native/build-win
   cp native/build-win/ub_native.dll Assets/Plugins/x86_64/
 else
