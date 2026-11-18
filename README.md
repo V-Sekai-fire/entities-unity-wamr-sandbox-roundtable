@@ -154,3 +154,48 @@ Case 4 on one runtime only (`bench/build/prof_lbfgs wamr|riscv-interp|riscv-bt <
 - **Register caching** (guest registers as C locals) is not enabled by default in the library, although `docs/INTEGRATION.md` says it is (the code default is off without libtcc). It helps about 5 to 8% here and does not touch the floating-point registers, which is where this guest spends its time. Larger translated blocks help a few percent more. Neither closes the gap, so the harness defaults are unchanged and the table above is the evidence.
 
 So the 2.4x is not bounds checking, call overhead or translation coverage. It is that a translator working instruction by instruction, with the guest state in memory, cannot match a compiler that optimises the whole function. A fix would have to keep the FP registers in C locals as well.
+
+
+## Equal comparison: wasm32, wasm64 and rv64 (cases 1 and 4, and case 4g on ggml-rd)
+
+What was made equal: one source per guest, one compiler (clang) and flags (`-O2 -ffp-contract=off`) for every target, one WAMR build for every WAMR row (memory64, which forces WAMR's classic interpreter), one libriscv, the same workload per row, and the residual checked identical across all rows of a table. Pointer width: wasm32 is ILP32, wasm64 and rv64 are LP64. Bounds checks cannot be made identical by choice: WAMR uses guard pages for a 32-bit memory but must use software checks for a 64-bit one, so wasm32 is shown both ways, and libriscv three ways (arena mask, a check per access, none).
+
+### Cases 1 and 4, `guest/guest_min.c` (`bench/guest/build_eq.sh`, `bench/eq.sh`)
+
+1M empty calls and 1M L-BFGS iterations, three rounds each (M2 Pro):
+
+| Row | case 1 ms | case 4 ms |
+|---|---|---|
+| wasm32 AOT, guard pages | 10.6 to 10.9 | 238 to 242 |
+| wasm32 AOT, software bounds | 10.9 to 11.1 | 284 to 291 |
+| **wasm64 AOT** (software bounds) | 10.9 to 11.0 | **303 to 304** |
+| rv64 translated, arena mask | 10.7 to 29.1 | 605 to 629 |
+| rv64 translated, checked | 11.8 to 37.9 | 886 to 969 |
+| rv64 translated, unchecked | 10.7 to 11.4 | 604 to 613 |
+| wasm32 interpreter (classic) | 29.2 | 7900 |
+| wasm64 interpreter (classic) | 29.1 | 9150 |
+| rv64 interpreter | 6.4 | 3856 |
+
+### Case 4g: the same L-BFGS on ggml-rd's f32 CPU kernels (`bench/ggml-rd/`)
+
+The guest is a ggml graph packed by ggml-rd's own packers and run through its kernels' slangc cpp emits, the CPU path of the backend that runs the same kernels as SPIR-V on a GPU. 20,000 iterations (1000 solves) per row; the residual 3.55271368e-12 is identical in every row and equals a native run of the same code. `build.sh` fetches the pinned sources (`fetch.sh`), builds wasm32 and rv64 with LLVM cross compilers (wasi-sdk; clang, lld and `repository-riscv64-sysroot`) and wasm64 with Emscripten's wasm64 sysroot, because wasi-sdk has no wasm64 libc. The five WASI imports of the wasm64 module take 64-bit pointers, which WAMR's built-in WASI does not provide, so the runner supplies them.
+
+| Row | ms |
+|---|---|
+| wasm32 AOT, guard pages | 978 |
+| wasm32 AOT, software bounds | 1463 to 1506 |
+| **wasm64 AOT** (software bounds) | **1308 to 1353** |
+| rv64 translated, arena mask | 3285 to 3348 |
+| rv64 translated, checked | 4037 to 4042 |
+| rv64 translated, unchecked | 3200 to 3241 |
+| wasm32 / wasm64 interpreter (classic) | 74,262 / 73,186 |
+| rv64 interpreter | 17,261 |
+
+### What it shows
+
+- wasm64 AOT against rv64 with a check on every access: 2.9x faster on case 4 (303 against 886 to 969 ms) and 3.0x on case 4g. With no checks on either side, wasm32 guard pages against rv64 unchecked: 2.5x and 3.3x.
+- Software bounds checks cost WAMR 20% (case 4) to 50% (case 4g) and libriscv's per-access check 45% (case 4) and 25% (case 4g); they are not what separates the runtimes.
+- Pointer width hardly matters: wasm64 is within 7% of wasm32 with software checks, and faster on case 4g.
+- Case 1 is a tie (about 11 ms per million calls) once libriscv's first round is discounted.
+- libriscv's interpreter is faster than WAMR's classic interpreter (2.0x on case 4, 4.2x on case 4g). The classic interpreter is what memory64 requires; WAMR's fast interpreter is 1.7x faster than it on wasm32.
+- libriscv translation is still 2.5 to 3.3x behind WAMR AOT on compute-bound code. That is the profile finding above: per-instruction translation with guest state in memory against LLVM optimising whole functions.

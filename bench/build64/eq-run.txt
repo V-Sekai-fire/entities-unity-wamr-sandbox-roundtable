@@ -1,0 +1,30 @@
+== wasm32 AOT, guard pages
+wamr          round 0: case1 10.9 ms (1M calls)  case4 241.8 ms (1000000 iterations)  residual 1.40992567e-14
+wamr          round 1: case1 10.7 ms (1M calls)  case4 240.9 ms (1000000 iterations)  residual 1.40992567e-14
+wamr          round 2: case1 10.6 ms (1M calls)  case4 238.5 ms (1000000 iterations)  residual 1.40992567e-14
+== wasm32 AOT, software bounds
+wamr          round 0: case1 11.1 ms (1M calls)  case4 284.3 ms (1000000 iterations)  residual 1.40992567e-14
+wamr          round 1: case1 10.9 ms (1M calls)  case4 290.4 ms (1000000 iterations)  residual 1.40992567e-14
+wamr          round 2: case1 11.0 ms (1M calls)  case4 291.4 ms (1000000 iterations)  residual 1.40992567e-14
+== wasm64 AOT (software bounds)
+wamr          round 0: case1 11.0 ms (1M calls)  case4 302.6 ms (1000000 iterations)  residual 1.40992567e-14
+wamr          round 1: case1 10.9 ms (1M calls)  case4 303.2 ms (1000000 iterations)  residual 1.40992567e-14
+wamr          round 2: case1 10.9 ms (1M calls)  case4 304.4 ms (1000000 iterations)  residual 1.40992567e-14
+== rv64 translated, arena mask
+riscv-bt      round 0: case1 29.1 ms (1M calls)  case4 629.2 ms (1000000 iterations)  residual 1.40992567e-14
+riscv-bt      round 1: case1 11.4 ms (1M calls)  case4 613.8 ms (1000000 iterations)  residual 1.40992567e-14
+riscv-bt      round 2: case1 10.7 ms (1M calls)  case4 605.0 ms (1000000 iterations)  residual 1.40992567e-14
+== rv64 translated, checked
+riscv-bt      round 0: case1 37.9 ms (1M calls)  case4 969.0 ms (1000000 iterations)  residual 1.40992567e-14
+riscv-bt      round 1: case1 11.8 ms (1M calls)  case4 886.2 ms (1000000 iterations)  residual 1.40992567e-14
+riscv-bt      round 2: case1 12.0 ms (1M calls)  case4 906.4 ms (1000000 iterations)  residual 1.40992567e-14
+== rv64 translated, unchecked
+riscv-bt      round 0: case1 11.4 ms (1M calls)  case4 612.8 ms (1000000 iterations)  residual 1.40992567e-14
+riscv-bt      round 1: case1 11.3 ms (1M calls)  case4 609.4 ms (1000000 iterations)  residual 1.40992567e-14
+riscv-bt      round 2: case1 10.7 ms (1M calls)  case4 604.0 ms (1000000 iterations)  residual 1.40992567e-14
+== wasm32 interpreter (classic)
+wamr          round 0: case1 29.2 ms (1M calls)  case4 7899.9 ms (1000000 iterations)  residual 1.40992567e-14
+== wasm64 interpreter (classic)
+wamr          round 0: case1 29.1 ms (1M calls)  case4 9149.9 ms (1000000 iterations)  residual 1.40992567e-14
+== rv64 interpreter
+riscv-interp  round 0: case1 6.4 ms (1M calls)  case4 3855.9 ms (1000000 iterations)  residual 1.40992567e-14

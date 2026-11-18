@@ -1,0 +1,9 @@
+/Users/ernest.lee/Desktop/entities-unity-wamr-sandbox-roundtable/bench/build64/CMakeFiles/vmlib.dir
+/Users/ernest.lee/Desktop/entities-unity-wamr-sandbox-roundtable/bench/build64/CMakeFiles/bench.dir
+/Users/ernest.lee/Desktop/entities-unity-wamr-sandbox-roundtable/bench/build64/CMakeFiles/prof_lbfgs.dir
+/Users/ernest.lee/Desktop/entities-unity-wamr-sandbox-roundtable/bench/build64/CMakeFiles/eq.dir
+/Users/ernest.lee/Desktop/entities-unity-wamr-sandbox-roundtable/bench/build64/CMakeFiles/edit_cache.dir
+/Users/ernest.lee/Desktop/entities-unity-wamr-sandbox-roundtable/bench/build64/CMakeFiles/rebuild_cache.dir
+/Users/ernest.lee/Desktop/entities-unity-wamr-sandbox-roundtable/bench/build64/libriscv/CMakeFiles/riscv.dir
+/Users/ernest.lee/Desktop/entities-unity-wamr-sandbox-roundtable/bench/build64/libriscv/CMakeFiles/edit_cache.dir
+/Users/ernest.lee/Desktop/entities-unity-wamr-sandbox-roundtable/bench/build64/libriscv/CMakeFiles/rebuild_cache.dir

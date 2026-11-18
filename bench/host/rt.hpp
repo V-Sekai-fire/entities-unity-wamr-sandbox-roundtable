@@ -149,6 +149,13 @@ struct Riscv : Rt {
     // guest stays inside its arena, as a wasm module stays inside its linear memory.
     o.translate_automatic_nbit_address_space = bt;
     // Experiments (profile notes in the README): guest registers as C locals, and the size of a translated block.
+    // RT_BOUNDS picks how the translated code treats guest addresses: mask (the default of this harness: an address is
+    // masked into the power-of-two arena), check (a bounds check on each access) or none (unchecked, as Godot's Sandbox runs).
+    if (const char *e = getenv("RT_BOUNDS")) {
+      const std::string b = e;
+      if (b == "check") o.translate_automatic_nbit_address_space = false;
+      else if (b == "none") { o.translate_automatic_nbit_address_space = false; o.translate_unsafe_remove_checks = true; }
+    }
     if (const char *e = getenv("RT_REGCACHE")) o.translate_use_register_caching = atoi(e) != 0;
     if (const char *e = getenv("RT_BLOCK_SPLIT")) o.translate_block_split = atoi(e);
 #endif

@@ -49,3 +49,5 @@ bench/usd-wasm/build*/
 /bench/godot-guest/bake/build/
 /bench/godot-guest/project/bintr/
 /bench/godot-guest/project/bench_guest.elf
+bench/ggml-rd/.cache/
+bench/ggml-rd/out/
