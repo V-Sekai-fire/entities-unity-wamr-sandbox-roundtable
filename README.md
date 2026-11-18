@@ -28,8 +28,8 @@ Both guests are built with clang from one source (`bench/guest/guest.c`), the rv
 |1. Empty export, 1,000,000 host calls|268.973|251.068|6.988|11.884|
 |2. 10,000 transforms, AOS|0.475|0.281|0.309|0.113|
 |2. 10,000 transforms, SOA|0.135|0.023|0.153|0.043|
-|3. Load, instantiate, first update, warm|0.201|0.110|0.699|1.013|
-|3. Same, first ever|0.373|0.214|6.644|476.322|
+|~~3. Load, instantiate, first update, warm~~|~~0.201~~|~~0.110~~|~~0.699~~|~~1.013~~|
+|~~3. Same, first ever~~|~~0.373~~|~~0.214~~|~~6.644~~|~~476.322~~|
 |4. L-BFGS saddle, 1,000,000 iterations|2862.954|247.112|4066.062|618.835|
 
 **Inside Unity 2022.3.22f1, headless batchmode**, median (min–max) of six runs (`bench/unity-runs/`):
@@ -40,8 +40,8 @@ Both guests are built with clang from one source (`bench/guest/guest.c`), the rv
 |1. Same, loop in native code|273.341 (258.942–281.597)|261.463 (252.173–281.929)|7.232 (6.667–12.121)|12.410 (11.641–13.228)|
 |2. 10,000 transforms, AOS|2.987 (2.805–3.483)|2.968 (2.663–3.170)|2.868 (2.552–3.201)|2.633 (2.412–3.050)|
 |2. 10,000 transforms, SOA|2.519 (2.446–2.910)|2.498 (2.374–2.714)|2.667 (2.551–2.909)|2.459 (2.317–2.712)|
-|3. Load, instantiate, first update, warm|0.218 (0.187–0.312)|0.154 (0.091–0.166)|4.540 (3.699–5.200)|5.649 (5.210–6.203)|
-|3. Same, first in the process|0.971 (0.876–1.018)|0.246 (0.144–0.337)|6.280 (5.311–19.009)|6.540 (5.807–791.612)|
+|~~3. Load, instantiate, first update, warm~~|~~0.218 (0.187–0.312)~~|~~0.154 (0.091–0.166)~~|~~4.540 (3.699–5.200)~~|~~5.649 (5.210–6.203)~~|
+|~~3. Same, first in the process~~|~~0.971 (0.876–1.018)~~|~~0.246 (0.144–0.337)~~|~~6.280 (5.311–19.009)~~|~~6.540 (5.807–791.612)~~|
 |4. L-BFGS saddle, 1,000,000 iterations|2997.507 (2867.128–3103.850)|261.382 (249.779–279.058)|4012.511 (3867.552–4161.395)|627.478 (611.207–651.306)|
 
 Checks: the transforms sum to 60,000 in both layouts, and the L-BFGS residual sums agree across all four runtimes (1.40992567e-14).
@@ -58,7 +58,7 @@ libriscv-bt was 1089 ms and is now about 620 ms. Two harness fixes, no libriscv 
 
 What this does not show:
 
-- **Case 3 in the tables above loads a 5 KB test guest.** The real `usd.elf` (32 MB) now runs under libriscv via sandbox-host with Mire and Marocchino: see `bench/usd/results.md` (open takes 3 to 12 s). WAMR has no equivalent because OpenUSD has no wasm build, so there is no like-for-like USD comparison.
+- **Case 3 rows are crossed out (~~like this~~): they load a 5 KB test guest, not the OpenUSD module, so they are invalid for case 3.** The real `usd.elf` (32 MB) runs under libriscv via sandbox-host with Mire and Marocchino: see `bench/usd/results.md` (open takes 3 to 12 s), but it is ~~libriscv only~~ and invalid as a comparison: WAMR cannot run it. WAMR has no equivalent because OpenUSD has no wasm build, so there is no like-for-like USD comparison.
 - No gas on either side. One machine.
 
 ## Status
