@@ -16,3 +16,6 @@ driven by its probe extended with a `usd` mode: create machine, `usd_init`, push
 WAMR has no row: there is no wasm build of OpenUSD, and producing one (oneTBB, plugins, the in-memory resolver,
 the Variant API) is a port, not a flag. Case 3 against WAMR still uses the 5 KB test guest.
 These numbers are the interpreter-or-whatever sandbox-host configures, not a tuned libriscv-bt run.
+
+
+Superseded by the case 3 section of the README, which adds the WAMR runs of the same core (`bench/usd/wamr-results-first-run.txt`).

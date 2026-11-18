@@ -1,0 +1,16 @@
+== Mire usd.aot
+run 0 rc=0 load+instantiate=24.7 init=0.4 copy=3.8 open=132.5 total=161.4 ms meshes=12 textures=9
+run 1 rc=0 load+instantiate=24.2 init=0.4 copy=3.7 open=131.8 total=160.2 ms meshes=12 textures=9
+run 2 rc=0 load+instantiate=24.1 init=0.4 copy=3.9 open=136.5 total=164.8 ms meshes=12 textures=9
+run 3 rc=0 load+instantiate=24.4 init=0.4 copy=3.8 open=132.9 total=161.5 ms meshes=12 textures=9
+run 4 rc=0 load+instantiate=24.5 init=0.5 copy=4.1 open=136.7 total=165.7 ms meshes=12 textures=9
+== Mire usd.wasm
+run 0 rc=0 load+instantiate=209.5 init=5.2 copy=4.2 open=1986.3 total=2205.1 ms meshes=12 textures=9
+== Marocchino usd.aot
+run 0 rc=0 load+instantiate=23.5 init=0.5 copy=6.2 open=267.5 total=297.7 ms meshes=9 textures=9
+run 1 rc=0 load+instantiate=25.4 init=0.4 copy=6.6 open=244.6 total=277.1 ms meshes=9 textures=9
+run 2 rc=0 load+instantiate=24.3 init=0.5 copy=6.7 open=238.6 total=270.0 ms meshes=9 textures=9
+run 3 rc=0 load+instantiate=23.9 init=0.4 copy=6.0 open=240.8 total=271.2 ms meshes=9 textures=9
+run 4 rc=0 load+instantiate=23.5 init=0.4 copy=5.9 open=241.7 total=271.5 ms meshes=9 textures=9
+== Marocchino usd.wasm
+run 0 rc=0 load+instantiate=209.3 init=5.0 copy=6.3 open=3756.9 total=3977.4 ms meshes=9 textures=9
