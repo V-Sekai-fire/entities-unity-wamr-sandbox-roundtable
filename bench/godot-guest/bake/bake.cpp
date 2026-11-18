@@ -23,10 +23,12 @@ int main(int argc, char **argv) {
   o.translate_future_segments = false;
   o.translate_invoke_compiler = true;           // bake time only: Godot itself never invokes a compiler
   o.translation_cache = true;
-  o.translate_ignore_instruction_limit = getenv("BAKE_LIMIT") == nullptr;  // Godot: get_instructions_max() <= 0
+  // Godot ignores the limit only when execution_timeout (get_instructions_max) is <= 0; BAKE_NOLIMIT=1 bakes that case.
+  o.translate_ignore_instruction_limit = getenv("BAKE_NOLIMIT") != nullptr;
   o.translate_automatic_nbit_address_space = true;  // Godot: m_bintr_automatic_nbit_as defaults to true
   o.translation_prefix = prefix;
   o.translation_suffix = ".dylib";
+  o.translate_unsafe_remove_checks = true;        // Godot: unchecked_memory_wanted() is true here; found by searching the hash (see README)
   o.default_exit_function = "fast_exit";
   o.ignore_text_section = getenv("BAKE_IGNORE_TEXT") != nullptr;
   Machine<RISCV64> m(std::string_view(image.data(), image.size()), o);

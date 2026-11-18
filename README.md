@@ -109,4 +109,18 @@ The Unity project and plugin (with the baked-translation plugin build) were dele
 
 For comparison, the standalone libriscv interpreter takes 3.9 to 4.0 s on case 4. Case 1 here is not comparable with the harness row, which loops in native code. Case 2 (transform access) is not ported: it was a Unity `Transform` measurement.
 
-Binary translation in this editor is **not on**: `has_feature_jit()` is false (no asmjit in this build), and godot-sandbox never compiles a translation, it only loads a prebaked `bintr-<hash>.dylib`. Godot asks for hash `590873FC` for this guest. `bench/godot-guest/bake` bakes with libriscv from `deps/` using Godot's `MachineOptions`, but its hashes (e.g. `0AEE675F`) do not match, and even the raw execute-segment checksum differs (`FB0BF128`), so the editor was built from a different libriscv than `deps/libriscv`. A translation from the wrong libriscv must not be loaded, so none is used. To get translated Godot rows, bake with the exact libriscv commit the editor was built from.
+### Binary translation in Godot
+
+This editor has no JIT (`has_feature_jit()` is false), and godot-sandbox never compiles a translation: it loads a prebaked `bintr-<hash>.dylib` from `sandbox/binary_translation/cache_dir`, and only when `sandbox/binary_translation/enabled` is set. `bench/godot-guest/bake.sh` bakes that file with libriscv at godot-sandbox's own pin (`ec5b426b`) and the `MachineOptions` the `Sandbox` builds its machine with; `run.sh` runs the cases in a real window.
+
+The hash has to match, or Godot never loads the file. It is the execute-segment checksum mixed with the generated defines, so I recovered Godot's options by searching for the defines that reproduce the hash the editor asks for (`bake/find_defines.cpp`, 1.8 million candidates, one match for `590873FC`): a 256 MiB arena, arena offset 2368, vector extension 32, **`RISCV_UNCHECKED_MEMORY` on** (Godot builds its machine with `translate_unsafe_remove_checks`), and instruction counting on (off when `execution_timeout` is 0, which is a second hash, `C4AD5EFE`, baked with `BAKE_NOLIMIT=1`). My first bake had both of those the wrong way round, which is why its hashes never matched.
+
+| Case 4, 1M L-BFGS iterations, Godot Sandbox | ms |
+|---|---|
+| interpreter | 3431 to 3448 |
+| binary translation, instruction counting on (`CFLAGS=-O2`) | 1077 to 1100 |
+| binary translation, no limit (`execution_timeout = 0`), `-O3 -fno-inline` | 972 |
+
+`is_binary_translated()` is true in both, and the residual sum is 1.4e-14, as in every other runtime. This is slower than the standalone harness (libriscv-bt about 620 ms); the compile flags do not explain it (`-O2`, `-O3`, with and without `-fno-inline` all land near 1.0 s), so the difference is in the guest build (zig, musl, `-O3`, vector extension) or the editor's libriscv, and I have not isolated it. Two caveats: the translated code calls back into the editor's libriscv, which is built from a commit I cannot see (it reproduces the layout of the pin, offset 2368, but that is not proof), and the unchecked-memory translation removes bounds checks that WAMR keeps, so it is not a like-for-like row against WAMR.
+
+`usd.elf` is not translated in Godot: the `Sandbox` leaves `ignore_text_section` off, so the initial segment is `.text` only and the first call into `.pxrctor` switches to an untranslated segment (see above). That needs `.pxrctor` linked into `.text` in the guest, or the option exposed in godot-sandbox.

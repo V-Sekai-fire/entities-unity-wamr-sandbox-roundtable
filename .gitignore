@@ -47,3 +47,5 @@ bench/usd-wasm/build*/
 /results-unity.json
 /bench/godot-guest/build/
 /bench/godot-guest/bake/build/
+/bench/godot-guest/project/bintr/
+/bench/godot-guest/project/bench_guest.elf
