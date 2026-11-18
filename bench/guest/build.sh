@@ -12,4 +12,5 @@ ls -l guest.wasm guest.rv64.elf
 # AOT for the host CPU (wamrc is built from deps/wamr/wamr-compiler against Homebrew llvm@22)
 WAMRC=${WAMRC:-../wamrc-build/wamrc}
 $WAMRC --opt-level=3 -o guest.aot guest.wasm
-ls -l guest.aot
+$WAMRC --target=x86_64 --target-abi=gnu --cpu=x86-64-v2 --opt-level=3 -o guest.win.aot guest.wasm
+ls -l guest.aot guest.win.aot

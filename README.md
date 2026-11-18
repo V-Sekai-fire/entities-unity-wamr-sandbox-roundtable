@@ -9,6 +9,20 @@ Benchmark comparing WAMR and godot-sandbox as script runtimes inside Unity Engin
 3. **Cold load.** Load a downloaded module, instantiate it, and run its first update. The module is the OpenUSD guest.
 4. **Compute.** 1,000,000 iterations of a complex math problem: L-BFGS (limited-memory BFGS) solving a saddle problem.
 
+## Unity project
+
+The repository root is a Unity 2022.3.22f1 project. `build.sh` (one command, no arguments, macOS arm64 host) builds everything it loads:
+
+- `Assets/Plugins/macOS/libub_native.dylib` (arm64) and `Assets/Plugins/x86_64/ub_native.dll` (Windows x86_64, cross-compiled with zig's clang). Both come from `native/`, which wraps WAMR and libriscv behind a small C ABI (`native/ub_native.cpp`). The Windows build has no libriscv binary translation, because that compiles C with the system compiler at run time.
+- `Assets/StreamingAssets/guest.*`: the guest as wasm, AOT (macOS arm64 and Windows x86_64) and rv64.
+- `Assets/Benchmark/Editor`: the runner (menu **Benchmark > Run all**) and 10,000 real Unity `Transform`s as the host API. Writes `results-unity.json`.
+
+The Windows DLL is built and its exports and imports are checked (only system DLLs), but it has not been run on Windows.
+
+## Avatars
+
+`tools/fbx2usd.py` imports an FBX and exports OpenUSD through Blender. The avatars are `chibifire-stages/character-mille-mire-feuille` (ships `usd/Mire.usda`) and `chibifire-stages/character-marocchino` (FBX, converted with the script). Both are Apache-2.0. They are not loaded by the benchmark yet.
+
 ## Run
 
     brew install llvm llvm@22 riscv64-elf-gcc ninja cmake

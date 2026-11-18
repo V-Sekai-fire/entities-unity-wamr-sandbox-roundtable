@@ -1,0 +1,21 @@
+# Unity
+/[Ll]ibrary/
+/[Tt]emp/
+/[Oo]bj/
+/[Bb]uild/
+/[Ll]ogs/
+/[Uu]ser[Ss]ettings/
+/[Mm]emoryCaptures/
+*.csproj
+*.sln
+*.log
+# Built by build.sh
+native/build/
+native/build-win/
+bench/build/
+bench/wamrc-build/
+rvbintr-*
+bench/guest/guest.wasm
+bench/guest/guest.aot
+bench/guest/guest.win.aot
+bench/guest/guest.rv64.elf

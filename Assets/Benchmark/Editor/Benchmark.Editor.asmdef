@@ -1,0 +1,9 @@
+{
+  "name": "Benchmark.Editor",
+  "rootNamespace": "Benchmark",
+  "references": [],
+  "includePlatforms": ["Editor"],
+  "excludePlatforms": [],
+  "allowUnsafeCode": true,
+  "autoReferenced": true
+}
