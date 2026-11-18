@@ -104,7 +104,7 @@ The same OpenUSD 26.05 core (`usd_core.cpp`, `mem_resolver.cpp` of interactor-us
 | libriscv binary translation (`usd.elf`) | not finished | | | |
 
 - "open" is `usd_open_staged` (WAMR) or `usd_push` plus `usd_open_staged` (libriscv). "total" adds machine or instance creation, which is 24 ms for AOT, 210 ms for the WAMR interpreter and 240 to 440 ms for libriscv loading the 32 MB ELF.
-- The libriscv rows run inside sandbox-host, which builds libriscv without binary translation, so that row is the interpreter. A translated run needs clang to compile a very large translation unit (3.6 GB resident, still going when this was written). Until it finishes, WAMR AOT against libriscv's interpreter is not a fair comparison; AOT against the WAMR interpreter is.
+- The libriscv rows run inside sandbox-host, which builds libriscv without binary translation, so that row is the interpreter. A translated build (sandbox-host rebuilt with binary translation on) took 325 s to compile the translation on first start and then opened Mire in the same time as the interpreter, so translation did not help here; why is not established (it may not be used for these calls). WAMR AOT is about 22x faster than either.
 - The libriscv rows are not reproducible from this repository (sandbox-host is private). The WAMR rows are: `bench/usd/fetch.sh`, `bench/usd-wasm/bootstrap.sh`, `./bench.sh`.
 - `usd.wasm` is built without C++ exceptions and threads (WAMR has no wasm exception handling); `usd.elf` is also single-threaded.
 - No gas on either side. One machine.
