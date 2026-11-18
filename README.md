@@ -19,42 +19,47 @@ The repository root is a Unity 2022.3.22f1 project. `build.sh` (one command, no 
 
 ### Results
 
-Native macOS arm64 harness, outside Unity. One guest source (`bench/guest/guest.c`) is built with clang for wasm32 and for rv64gc. Times are milliseconds. Raw output is in `bench/results.json`.
+Both guests are built with clang from one source (`bench/guest/guest.c`), the rv64 one with `-ffp-contract=off`. libriscv translation uses `translate_automatic_nbit_address_space`. Milliseconds.
+
+**Native macOS arm64 harness** (`bench/results.json`):
 
 |Case|wamr-interp|wamr-aot|libriscv-interp|libriscv-bt|
 |---|---|---|---|---|
-|1. Empty export, 1,000,000 host calls (total)|259.7|250.3|6.846|12.6|
-|2. 10,000 transforms, AOS, one host call each (median of 200)|0.577|0.401|0.300|0.120|
-|2. 10,000 transforms, SOA, 24 column calls (median of 200)|0.132|0.022|0.151|0.051|
-|3. Load from disk, instantiate, first update, cache warm (median of 200)|0.175|0.066|0.672|0.905|
-|3. Same, first ever (translation compiled and cached)|0.235|0.121|5.806|744.4|
-|4. L-BFGS saddle, 1,000,000 iterations (total)|2844.9|253.1|3531.6|1088.5|
+|1. Empty export, 1,000,000 host calls|268.973|251.068|6.988|11.884|
+|2. 10,000 transforms, AOS|0.475|0.281|0.309|0.113|
+|2. 10,000 transforms, SOA|0.135|0.023|0.153|0.043|
+|3. Load, instantiate, first update, warm|0.201|0.110|0.699|1.013|
+|3. Same, first ever|0.373|0.214|6.644|476.322|
+|4. L-BFGS saddle, 1,000,000 iterations|2862.954|247.112|4066.062|618.835|
 
-Checks: every runtime leaves the host transforms summing to 60,000 in both layouts. The L-BFGS residual sums agree to 7 digits (1.40992567e-14 for WAMR, 1.40992571e-14 for libriscv). They differ because the rv64 build uses fused multiply-add.
+**Inside Unity 2022.3.22f1, headless batchmode**, median (min–max) of six runs (`bench/unity-runs/`):
 
-Checks on the WAMR AOT numbers:
+|Case|wamr-interp|wamr-aot|libriscv-interp|libriscv-bt|
+|---|---|---|---|---|
+|1. 1,000,000 empty calls, loop in C#|289.227 (274.491–300.448)|289.327 (260.014–312.292)|21.302 (14.811–24.447)|27.370 (20.527–37.872)|
+|1. Same, loop in native code|273.341 (258.942–281.597)|261.463 (252.173–281.929)|7.232 (6.667–12.121)|12.410 (11.641–13.228)|
+|2. 10,000 transforms, AOS|2.987 (2.805–3.483)|2.968 (2.663–3.170)|2.868 (2.552–3.201)|2.633 (2.412–3.050)|
+|2. 10,000 transforms, SOA|2.519 (2.446–2.910)|2.498 (2.374–2.714)|2.667 (2.551–2.909)|2.459 (2.317–2.712)|
+|3. Load, instantiate, first update, warm|0.218 (0.187–0.312)|0.154 (0.091–0.166)|4.540 (3.699–5.200)|5.649 (5.210–6.203)|
+|3. Same, first in the process|0.971 (0.876–1.018)|0.246 (0.144–0.337)|6.280 (5.311–19.009)|6.540 (5.807–791.612)|
+|4. L-BFGS saddle, 1,000,000 iterations|2997.507 (2867.128–3103.850)|261.382 (249.779–279.058)|4012.511 (3867.552–4161.395)|627.478 (611.207–651.306)|
 
-- Case 4 compiled natively for arm64 with clang `-O2` takes 223 ms (230 to 244 ms over repeated runs) against 253 ms for WAMR AOT, so AOT is within about 10 percent of native code, as expected for AOT.
-- AOT time is linear in the work: 278, 126, 64 and 24 ms for 50,000, 25,000, 12,500 and 5,000 solves, and its summed residual equals the interpreter's and the native build's at every size (1.40992567e-14, 7.04962836e-15, 3.52479767e-15, 1.40992567e-15).
-- Every one of the 20 iterations of a solve does real work: the residual falls from 1.5 to 2.8e-19 with no stalled iterations.
-- WAMR AOT does bounds-check linear memory. On 64-bit hosts `wamrc` leaves the check to the MMU (a guard-page reservation), which costs almost nothing. Compiled with `--bounds-checks=1` (explicit compare-and-branch on every access, which is what libriscv's translation does) case 4 takes 270 ms against 246 ms, and 10,000 AOS transforms take 0.55 ms against 0.41 ms. So the guard pages are worth about 9 percent here; they do not explain the 4x gap to libriscv.
-- The case 1 call cost is the same for the interpreter and AOT (about 250 ns per `wasm_runtime_call_wasm`), because the call path, not the guest code, dominates an empty function.
+Checks: the transforms sum to 60,000 in both layouts, and the L-BFGS residual sums agree across all four runtimes (1.40992567e-14).
 
-Reading the table:
+- WAMR AOT is within about 10% of native arm64 clang code on case 4 (223 ms native), scales linearly with the work, and does bounds-check memory (MMU guard pages by default; software checks cost about 9% more).
+- libriscv wins the host-boundary cases (1, 2 AOS). WAMR AOT wins compute (case 4), about 2.5x over libriscv's translation and 15x over its interpreter.
+- In Unity case 2 is equal for all four runtimes within the spread, because `Transform` access dominates.
+- libriscv translation costs 0.5 to 0.9 s the first time and about 1 ms to load once cached. Ship it pre-generated.
+- Compile flags (`-O2`, `-mcpu=native`, `-Ofast`) change libriscv case 4 by under 3%.
 
-- libriscv wins the host-boundary cases (1 and 2 AOS). A call is a register setup and a jump; a WAMR call goes through `wasm_runtime_call_wasm`.
-- WAMR AOT wins compute (case 4), about 4.3x faster than libriscv's binary translation and 14x faster than its interpreter.
-- libriscv binary translation is about 4.5x slower than native code here, not close to native. Its translation, built with libtcc off, keeps guest registers in the CPU structure and checks every load and store against the arena, and its translated code reports `ARCH=HOST_UNKNOWN` on arm64. Turning on register caching and n-bit address masking improves case 4 by at most 20 percent and makes empty calls up to 10 times slower, so they are left at their defaults.
-- The guest compiler matters: building the rv64 guest with GCC instead of clang made libriscv 1.5x slower in case 4 (interpreter 5.8 s against 3.5 s, translation 1.7 s against 1.1 s).
-- libriscv binary translation costs 745 ms the first time and 0.9 ms to load afterwards. A shipped build needs the translation pre-generated and embedded; libriscv supports embedding the generated source.
-- WAMR AOT loads fastest (0.066 ms).
+### libriscv case 4 follow-up
+
+libriscv-bt was 1089 ms and is now about 620 ms. Two harness fixes, no libriscv patch: the guest is built with `-ffp-contract=off` (otherwise fused multiply-adds go through a callback), and the n-bit address space option masks addresses instead of bounds-checking each access. A patch that cached FP registers as C locals gave wrong results (check 5e-315) and was reverted. libriscv-rs (`rvlinux -j`) SIGILLs on macOS arm64 because `icache.rs` reads `ctr_el0`; using `sys_icache_invalidate` on Apple fixes it, and it then runs the 1M-iteration guest in about 1.3 s wall (not measured in this harness, so not in the tables).
 
 What this does not show:
 
-- Case 3 loads a 5 KB test guest, not the OpenUSD module.
-- libriscv is built here as 64-bit only with its default arena. godot-sandbox guests use libriscv's own build options; sandbox-host adds gas and a Variant wire that this harness does not.
-- No gas on either side, which sandbox-host needs.
-- One machine, one run of the totals in this table. The Unity section has repeated runs.
+- **Case 3 loads a 5 KB test guest, not the OpenUSD module.** `usd.elf` was not obtained; sandbox-host's native build was started but not finished. That is still open.
+- No gas on either side. One machine.
 
 ## Status
 
