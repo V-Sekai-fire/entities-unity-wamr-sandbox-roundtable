@@ -1,7 +1,7 @@
 # Baseline hygiene: these hooks report and never rewrite files.
 # Lockfiles, fixtures, binary formats and vendored trees are excluded
 # because fixtures are compared byte for byte.
-exclude: '(^|/)(vendor|third_party|thirdparty|build)/|\.(lock|usd[a-z]?|parquet|svg|png|jpe?g|webp|lean|glb|gltf|ppm|bin)$|(^|/)package-lock\.json$'
+exclude: '^deps/|(^|/)(vendor|third_party|thirdparty|build)/|\.(lock|usd[a-z]?|parquet|svg|png|jpe?g|webp|lean|glb|gltf|ppm|bin)$|(^|/)package-lock\.json$'
 repos:
   - repo: builtin
     hooks:
